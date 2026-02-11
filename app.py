@@ -212,15 +212,15 @@ def get_monte_carlo(n_sims=10000):
         results[tourney[-2]["w"]]["Bronze"] += 1
 
     df = pd.DataFrame.from_dict(results, orient='index')
-    df["🥇 Zlato %"] = (df["Gold"] / n_sims * 100).apply(lambda x: f"{x:.2f} %")
-    df["🥈 Stříbro %"] = (df["Silver"] / n_sims * 100).apply(lambda x: f"{x:.2f} %")
-    df["🥉 Bronz %"] = (df["Bronze"] / n_sims * 100).apply(lambda x: f"{x:.2f} %")
+    df["Zlato %"] = (df["Gold"] / n_sims * 100).apply(lambda x: f"{x:.2f} %")
+    df["Stříbro %"] = (df["Silver"] / n_sims * 100).apply(lambda x: f"{x:.2f} %")
+    df["Bronz %"] = (df["Bronze"] / n_sims * 100).apply(lambda x: f"{x:.2f} %")
     df["Celkem medaile %"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100).apply(lambda x: f"{x:.2f} %")
     return df.sort_values("Gold", ascending=False)
 
 
 # --- 6. UI ---
-tab1, tab2 = st.tabs(["🎮 Simulace", "📊 Prediktor"])
+tab1, tab2 = st.tabs(["Simulace", "Prediktor"])
 
 with tab1:
     c_ctrl1, c_ctrl2 = st.columns([1, 4])
@@ -284,4 +284,5 @@ with tab1:
 with tab2:
     st.header("📈 Predikce (10 000 simulací)")
     with st.spinner('Počítám pravděpodobnosti...'): mc_df = get_monte_carlo(10000)
-    st.table(mc_df[["🥇 Zlato %", "🥈 Stříbro %", "🥉 Bronz %", "Celkem medaile %"]])
+    st.table(mc_df[["Zlato %", "Stříbro %", "Bronz %", "Celkem medaile %"]])
+
