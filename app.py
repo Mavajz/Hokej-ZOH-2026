@@ -15,7 +15,7 @@ team_powers = {
 
 real_results = {
     ("Slovensko", "Finsko"): (4, 1, "REG"),
-    ("Švédsko", "Itálie"): (5, 2, "REG")
+    ("Švédsko", "Itálie"): (5, 2, "REG"),
     ("Švýcarsko", "Francie"): (4, 0, "REG")
 }
 
@@ -286,5 +286,6 @@ with tab2:
     st.header("📈 Predikce (10 000 simulací)")
     with st.spinner('Počítám pravděpodobnosti...'): mc_df = get_monte_carlo(10000)
     st.table(mc_df[["Zlato %", "Stříbro %", "Bronz %", "Celkem medaile %"]])
+
 
 
