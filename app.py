@@ -9,13 +9,14 @@ st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="�
 # --- 2. DATA (Zkalibrováno podle kurzů) ---
 team_powers = {
     "Kanada": 98, "USA": 97, "Švédsko": 92, "Česko": 89,
-    "Finsko": 85, "Slovensko": 84, "Švýcarsko": 83, "Německo": 76,
-    "Dánsko": 60, "Lotyšsko": 58, "Itálie": 40, "Francie": 35
+    "Finsko": 85, "Slovensko": 84, "Švýcarsko": 84, "Německo": 76,
+    "Dánsko": 60, "Lotyšsko": 58, "Itálie": 40, "Francie": 33
 }
 
 real_results = {
     ("Slovensko", "Finsko"): (4, 1, "REG"),
     ("Švédsko", "Itálie"): (5, 2, "REG")
+    ("Švýcarsko", "Francie"): (4, 0, "REG")
 }
 
 groups_def = {
@@ -285,4 +286,5 @@ with tab2:
     st.header("📈 Predikce (10 000 simulací)")
     with st.spinner('Počítám pravděpodobnosti...'): mc_df = get_monte_carlo(10000)
     st.table(mc_df[["Zlato %", "Stříbro %", "Bronz %", "Celkem medaile %"]])
+
 
