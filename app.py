@@ -9,9 +9,9 @@ st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="�
 
 # --- 2. DATA (Aktuální síla po zápasech 12. 2. 2026) ---
 team_powers = {
-    "Kanada": 99, "USA": 97, "Švédsko": 92, "Česko": 84,
-    "Slovensko": 84, "Švýcarsko": 84, "Finsko": 82,
-    "Německo": 76, "Dánsko": 60, "Lotyšsko": 58,
+    "Kanada": 99, "USA": 98, "Švédsko": 92, "Česko": 84,
+    "Slovensko": 85, "Švýcarsko": 84, "Finsko": 82,
+    "Německo": 77, "Dánsko": 58, "Lotyšsko": 57,
     "Itálie": 40, "Francie": 33
 }
 
@@ -19,7 +19,9 @@ real_results = {
     ("Slovensko", "Finsko"): (4, 1, "REG"),
     ("Švédsko", "Itálie"): (5, 2, "REG"),
     ("Švýcarsko", "Francie"): (4, 0, "REG"),
-    ("Česko", "Kanada"): (0, 5, "REG")
+    ("Česko", "Kanada"): (0, 5, "REG"),
+    ("Lotyšsko", "USA"): (1, 5, "REG"),
+    ("Německo", "Dánsko"): (3, 1, "REG")
 }
 
 groups_def = {
@@ -289,3 +291,4 @@ with tab3:
             st.info(f"Zázrak se stal v simulaci ID: **{lucky}**")
     else:
         st.error(f"Tým {look_team} v 10 000 simulacích tento cíl nesplnil.")
+
