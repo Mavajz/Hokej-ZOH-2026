@@ -7,11 +7,11 @@ from functools import cmp_to_key
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
 
-# --- 2. DATA (Aktualizováno podle reálných výkonů k 13. 2. 2026) ---
+# --- 2. DATA (Aktualizováno k 13. 2. 2026 po zápasech FIN x SWE a ITA x SVK) ---
 team_powers = {
-    "Kanada": 99, "USA": 98, "Švédsko": 92, "Slovensko": 85, 
-    "Česko": 84, "Švýcarsko": 84, "Finsko": 82, "Německo": 77, 
-    "Dánsko": 58, "Lotyšsko": 57, "Itálie": 40, "Francie": 33
+    "Kanada": 99, "USA": 98, "Švédsko": 90, "Finsko": 87, 
+    "Slovensko": 86, "Česko": 84, "Švýcarsko": 84, "Německo": 77, 
+    "Dánsko": 58, "Lotyšsko": 57, "Itálie": 42, "Francie": 33
 }
 
 real_results = { 
@@ -20,7 +20,9 @@ real_results = {
     ("Švýcarsko", "Francie"): (4, 0, "REG"),
     ("Česko", "Kanada"): (0, 5, "REG"),
     ("Lotyšsko", "USA"): (1, 5, "REG"),
-    ("Německo", "Dánsko"): (3, 1, "REG")
+    ("Německo", "Dánsko"): (3, 1, "REG"),
+    ("Finsko", "Švédsko"): (4, 1, "REG"), # NOVÝ VÝSLEDEK
+    ("Itálie", "Slovensko"): (2, 3, "REG")  # NOVÝ VÝSLEDEK
 }
 
 groups_def = {
@@ -32,7 +34,7 @@ groups_def = {
 dates_list = ["Středa 11. 2.", "Čtvrtek 12. 2.", "Pátek 13. 2.", "Sobota 14. 2.", "Neděle 15. 2.", 
               "Úterý 17. 2.", "Středa 18. 2.", "Pátek 20. 2.", "Sobota 21. 2.", "Neděle 22. 2."]
 
-# --- 3. CSS DESIGN ---
+# --- 3. CSS DESIGN (Vlastní heatmapa se zářivou zelenou #00ff00) ---
 st.markdown("""
 <style>
     .match-box {
@@ -59,8 +61,7 @@ st.markdown("""
 def sim_match(t1, t2, m_seed):
     if (t1, t2) in real_results: return real_results[(t1, t2)]
     if (t2, t1) in real_results: 
-        r = real_results[(t2, t1)]
-        return r[1], r[0], r[2]
+        r = real_results[(t2, t1)]; return r[1], r[0], r[2]
     
     random.seed(m_seed); np.random.seed(m_seed)
     p1, p2 = team_powers[t1], team_powers[t2]
@@ -118,8 +119,7 @@ def run_tourney_cached(seed):
     for gn, tms in groups_def.items():
         g_matches = [m for m in matches if m["t1"] in tms]
         sorted_tms, g_stats = get_iihf_rankings(tms, g_matches)
-        for i, t in enumerate(sorted_tms): 
-            rnk_12.append({"T": t, "R": i+1, "B": g_stats[t]["B"], "D": g_stats[t]["GF"]-g_stats[t]["GA"]})
+        for i, t in enumerate(sorted_tms): rnk_12.append({"T": t, "R": i+1, "B": g_stats[t]["B"], "D": g_stats[t]["GF"]-g_stats[t]["GA"]})
 
     w = sorted([x for x in rnk_12 if x["R"]==1], key=lambda x: (x["B"], x["D"]), reverse=True)
     r = sorted([x for x in rnk_12 if x["R"]==2], key=lambda x: (x["B"], x["D"]), reverse=True)
@@ -145,7 +145,7 @@ def run_tourney_cached(seed):
     matches.append({"d": "Neděle 22. 2.", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "FINÁLE", "w": gold_w})
     return matches
 
-# --- 5. STATISTIKA PRO PREDIKTOR ---
+# --- 5. STATISTIKA ---
 @st.cache_data
 def get_mc_stats(n_sims=10000):
     res_stats = {t: {"Gold": 0, "Silver": 0, "Bronze": 0, "G_Seeds": [], "M_Seeds": []} for t in team_powers}
@@ -155,8 +155,9 @@ def get_mc_stats(n_sims=10000):
         res_stats[gw]["Gold"] += 1; res_stats[sw]["Silver"] += 1; res_stats[bw]["Bronze"] += 1
         res_stats[gw]["G_Seeds"].append(i)
         for t in [gw, sw, bw]: res_stats[t]["M_Seeds"].append(i)
+        
     df = pd.DataFrame.from_dict(res_stats, orient='index')
-    df["Zlato"] = (df["Gold"] / n_sims * 100); df["Stříbro"] = (df["Silver"] / n_sims * 100)
+    df["Zlato"] = (df["Gold"] / n_sims * 100); df["🥈 Stříbro"] = (df["Silver"] / n_sims * 100)
     df["Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("Zlato", ascending=False), res_stats
 
@@ -197,14 +198,14 @@ with tab1:
                     st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{label}</b></div>", unsafe_allow_html=True)
 
 with tab2:
-    st.header("Prediktor (10 000 simulací)")
+    st.header("📈 Prediktor (10 000 simulací)")
     mc_df, _ = get_mc_stats(10000)
     from matplotlib.colors import LinearSegmentedColormap
     custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
     st.dataframe(mc_df[["Zlato", "Stříbro", "Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=455)
 
 with tab3:
-    st.header("Hledač hokejových zázraků")
+    st.header("🔍 Hledač hokejových zázraků")
     _, mc_raw = get_mc_stats(10000)
     col_find1, col_find2 = st.columns(2)
     with col_find1: look_team = st.selectbox("Vyber tým", options=list(team_powers.keys()))
@@ -214,3 +215,4 @@ with tab3:
         st.success(f"Tým **{look_team}** splnil tento cíl v **{len(seeds_found)}** simulacích.")
         if st.button("Vygeneruj ID zázraku"): st.info(f"Zázrak se stal v simulaci ID: **{random.choice(seeds_found)}**")
     else: st.error(f"Tým {look_team} v 10 000 simulacích tento cíl nesplnil.")
+
