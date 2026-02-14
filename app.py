@@ -7,11 +7,11 @@ from functools import cmp_to_key
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
 
-# --- 2. DATA (Aktualizováno k 13. 2. 2026 po zápasech FIN x SWE a ITA x SVK) ---
+# --- 2. DATA (Aktualizováno k 14. 2. 2026 po pátku 13.) ---
 team_powers = {
     "Kanada": 99, "USA": 98, "Švédsko": 90, "Finsko": 87, 
-    "Slovensko": 86, "Česko": 84, "Švýcarsko": 84, "Německo": 77, 
-    "Dánsko": 58, "Lotyšsko": 57, "Itálie": 42, "Francie": 33
+    "Slovensko": 86, "Česko": 84, "Švýcarsko": 83, "Německo": 77, 
+    "Dánsko": 58, "Lotyšsko": 57, "Itálie": 42, "Francie": 35
 }
 
 real_results = { 
@@ -21,8 +21,10 @@ real_results = {
     ("Česko", "Kanada"): (0, 5, "REG"),
     ("Lotyšsko", "USA"): (1, 5, "REG"),
     ("Německo", "Dánsko"): (3, 1, "REG"),
-    ("Finsko", "Švédsko"): (4, 1, "REG"), # NOVÝ VÝSLEDEK
-    ("Itálie", "Slovensko"): (2, 3, "REG")  # NOVÝ VÝSLEDEK
+    ("Finsko", "Švédsko"): (4, 1, "REG"),
+    ("Itálie", "Slovensko"): (2, 3, "REG"),
+    ("Francie", "Česko"): (3, 6, "REG"),   # NOVÝ VÝSLEDEK
+    ("Kanada", "Švýcarsko"): (5, 1, "REG")  # NOVÝ VÝSLEDEK
 }
 
 groups_def = {
@@ -34,7 +36,7 @@ groups_def = {
 dates_list = ["Středa 11. 2.", "Čtvrtek 12. 2.", "Pátek 13. 2.", "Sobota 14. 2.", "Neděle 15. 2.", 
               "Úterý 17. 2.", "Středa 18. 2.", "Pátek 20. 2.", "Sobota 21. 2.", "Neděle 22. 2."]
 
-# --- 3. CSS DESIGN (Vlastní heatmapa se zářivou zelenou #00ff00) ---
+# --- 3. CSS DESIGN ---
 st.markdown("""
 <style>
     .match-box {
@@ -157,7 +159,7 @@ def get_mc_stats(n_sims=10000):
         for t in [gw, sw, bw]: res_stats[t]["M_Seeds"].append(i)
         
     df = pd.DataFrame.from_dict(res_stats, orient='index')
-    df["Zlato"] = (df["Gold"] / n_sims * 100); df["🥈 Stříbro"] = (df["Silver"] / n_sims * 100)
+    df["Zlato"] = (df["Gold"] / n_sims * 100); df["Stříbro"] = (df["Silver"] / n_sims * 100)
     df["Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("Zlato", ascending=False), res_stats
 
@@ -215,4 +217,4 @@ with tab3:
         st.success(f"Tým **{look_team}** splnil tento cíl v **{len(seeds_found)}** simulacích.")
         if st.button("Vygeneruj ID zázraku"): st.info(f"Zázrak se stal v simulaci ID: **{random.choice(seeds_found)}**")
     else: st.error(f"Tým {look_team} v 10 000 simulacích tento cíl nesplnil.")
-
+    
