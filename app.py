@@ -7,11 +7,11 @@ from functools import cmp_to_key
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
 
-# --- 2. DATA (Aktualizováno po sobotních zápasech GER-LAT a SWE-SVK) ---
+# --- 2. DATA (Aktualizováno k neděli 15. 2. 2026 ráno) ---
 team_powers = {
-    "Kanada": 99, "USA": 98, "Švédsko": 92, "Finsko": 87, 
+    "Kanada": 99, "USA": 98, "Švédsko": 92, "Finsko": 88, 
     "Slovensko": 85, "Česko": 84, "Švýcarsko": 83, "Německo": 72, 
-    "Lotyšsko": 63, "Dánsko": 58, "Itálie": 42, "Francie": 35
+    "Lotyšsko": 63, "Dánsko": 59, "Itálie": 38, "Francie": 35
 }
 
 real_results = { 
@@ -25,8 +25,10 @@ real_results = {
     ("Itálie", "Slovensko"): (2, 3, "REG"),
     ("Francie", "Česko"): (3, 6, "REG"),
     ("Kanada", "Švýcarsko"): (5, 1, "REG"),
-    ("Německo", "Lotyšsko"): (3, 4, "REG"), # NOVÝ VÝSLEDEK
-    ("Švédsko", "Slovensko"): (5, 3, "REG")  # NOVÝ VÝSLEDEK
+    ("Německo", "Lotyšsko"): (3, 4, "REG"),
+    ("Švédsko", "Slovensko"): (5, 3, "REG"),
+    ("Finsko", "Itálie"): (11, 0, "REG"), # NOVÝ VÝSLEDEK
+    ("USA", "Dánsko"): (6, 3, "REG")      # NOVÝ VÝSLEDEK
 }
 
 groups_def = {
@@ -38,7 +40,7 @@ groups_def = {
 dates_list = ["Středa 11. 2.", "Čtvrtek 12. 2.", "Pátek 13. 2.", "Sobota 14. 2.", "Neděle 15. 2.", 
               "Úterý 17. 2.", "Středa 18. 2.", "Pátek 20. 2.", "Sobota 21. 2.", "Neděle 22. 2."]
 
-# --- 3. CSS DESIGN (Heatmapa s neonově zelenou #00ff00) ---
+# --- 3. CSS DESIGN ---
 st.markdown("""
 <style>
     .match-box {
@@ -125,7 +127,7 @@ def run_tourney_cached(seed):
         sorted_tms, _ = get_iihf_rankings(tms, g_matches)
         for i, t in enumerate(sorted_tms): rnk_12.append({"T": t, "R": i+1})
 
-    sd = [x["T"] for x in rnk_12] # Stabilní seeding pro ukázku
+    sd = [x["T"] for x in rnk_12] # Stabilní seeding
 
     of_w = {}
     for i, (h, l) in enumerate([(4,11),(5,10),(6,9),(7,8)]):
@@ -161,7 +163,7 @@ def get_mc_stats(n_sims=10000):
     return df.sort_values("Zlato", ascending=False), res_stats
 
 # --- UI ---
-tab1, tab2, tab3 = st.tabs(["Simulace", "Prediktor", "Hledač zázraků"])
+tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zázraků"])
 
 with tab1:
     c_ctrl1, c_ctrl2 = st.columns([1, 4])
@@ -194,20 +196,20 @@ with tab1:
                     st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']} ({m['rt']})</b></div>", unsafe_allow_html=True)
 
 with tab2:
-    st.header("📈 Prediktor (10 000 simulací)")
+    st.header("Prediktor (10 000 simulací)")
     mc_df, _ = get_mc_stats(10000)
     from matplotlib.colors import LinearSegmentedColormap
     custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
     st.dataframe(mc_df[["Zlato", "Stříbro", "Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=455)
 
 with tab3:
-    st.header("🔍 Hledač hokejových zázraků")
+    st.header("Hledač hokejových zázraků")
     _, mc_raw = get_mc_stats(10000)
     look_team = st.selectbox("Vyber tým", options=list(team_powers.keys()))
     look_type = st.radio("Co hledáme?", ["Pouze Zlato", "Jakoukoliv medaili"])
     seeds_found = mc_raw[look_team]["G_Seeds"] if "Zlato" in look_type else mc_raw[look_team]["M_Seeds"]
     if seeds_found:
         st.success(f"Tým **{look_team}** splnil tento cíl v **{len(seeds_found)}** simulacích.")
-        if st.button("Vygeneruj ID zázraku"): st.info(f"Zkus zadat Seed ID: **{random.choice(seeds_found)}**")
+        if st.button("Vygeneruj ID zázraku"): st.info(f"Zázrak se stal v simulaci ID: **{random.choice(seeds_found)}**")
     else: st.error(f"Tým {look_team} v 10 000 simulacích tento cíl nesplnil.")
-    
+        
