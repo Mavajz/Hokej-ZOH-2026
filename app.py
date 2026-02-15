@@ -7,10 +7,10 @@ from functools import cmp_to_key
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
 
-# --- 2. DATA (Aktualizováno k neděli 15. 2. 2026 ráno) ---
+# --- 2. DATA (Zkalibrováno po dohrání skupiny A) ---
 team_powers = {
     "Kanada": 99, "USA": 98, "Švédsko": 92, "Finsko": 88, 
-    "Slovensko": 85, "Česko": 84, "Švýcarsko": 83, "Německo": 72, 
+    "Slovensko": 85, "Švýcarsko": 85, "Česko": 83, "Německo": 72, 
     "Lotyšsko": 63, "Dánsko": 59, "Itálie": 38, "Francie": 35
 }
 
@@ -27,8 +27,9 @@ real_results = {
     ("Kanada", "Švýcarsko"): (5, 1, "REG"),
     ("Německo", "Lotyšsko"): (3, 4, "REG"),
     ("Švédsko", "Slovensko"): (5, 3, "REG"),
-    ("Finsko", "Itálie"): (11, 0, "REG"), # NOVÝ VÝSLEDEK
-    ("USA", "Dánsko"): (6, 3, "REG")      # NOVÝ VÝSLEDEK
+    ("Finsko", "Itálie"): (11, 0, "REG"),
+    ("USA", "Dánsko"): (6, 3, "REG"),
+    ("Švýcarsko", "Česko"): (4, 3, "PP") # NOVÝ VÝSLEDEK
 }
 
 groups_def = {
@@ -106,6 +107,7 @@ def get_iihf_rankings(group_teams, group_matches):
 @st.cache_data
 def run_tourney_cached(seed):
     matches = []
+    # Základní skupina
     sched = [
         ("Středa 11. 2.", "Slovensko", "Finsko"), ("Středa 11. 2.", "Švédsko", "Itálie"),
         ("Čtvrtek 12. 2.", "Švýcarsko", "Francie"), ("Čtvrtek 12. 2.", "Česko", "Kanada"),
@@ -121,49 +123,84 @@ def run_tourney_cached(seed):
         s1, s2, rt = sim_match(t1, t2, seed + i)
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "G"})
 
-    rnk_12 = []
+    # GLOBAL SEEDING (D1-D12)
+    group_rankings = []
     for gn, tms in groups_def.items():
-        g_matches = [m for m in matches if m["t1"] in tms]
-        sorted_tms, _ = get_iihf_rankings(tms, g_matches)
-        for i, t in enumerate(sorted_tms): rnk_12.append({"T": t, "R": i+1})
+        g_m = [m for m in matches if m["t1"] in tms]
+        sorted_tms, stats = get_iihf_rankings(tms, g_m)
+        for i, t in enumerate(sorted_tms):
+            group_rankings.append({"T": t, "Pos": i+1, "B": stats[t]["B"], "D": stats[t]["GF"]-stats[t]["GA"], "GF": stats[t]["GF"]})
 
-    sd = [x["T"] for x in rnk_12] # Stabilní seeding
+    # Rozdělení na 1., 2., 3. a 4. místa pro cross-group srovnání
+    d1_3 = sorted([x for x in group_rankings if x["Pos"]==1], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
+    d4_6 = sorted([x for x in group_rankings if x["Pos"]==2], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
+    d7_9 = sorted([x for x in group_rankings if x["Pos"]==3], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
+    d10_12 = sorted([x for x in group_rankings if x["Pos"]==4], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
+    
+    sd = [x["T"] for x in d1_3 + d4_6 + d7_9 + d10_12]
 
-    of_w = {}
-    for i, (h, l) in enumerate([(4,11),(5,10),(6,9),(7,8)]):
-        t1, t2 = sd[h], sd[l]; s1, s2, rt = sim_match(t1, t2, seed + 100 + i); of_w[h] = t1 if s1 > s2 else t2
-        matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": of_w[h]})
-    qf_w = []
-    for i, (h, l) in enumerate([(0,7),(1,6),(2,5),(3,4)]):
-        t1, t2 = sd[h], of_w[l]; s1, s2, rt = sim_match(t1, t2, seed + 200 + i); w = t1 if s1 > s2 else t2; qf_w.append(w)
-        matches.append({"d": "Středa 18. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": w})
-    sf_w, sf_l = [], []
-    for i, (a, b) in enumerate([(qf_w[1], qf_w[2]), (qf_w[3], qf_w[0])]):
-        s1, s2, rt = sim_match(a, b, seed + 300 + i); w = a if s1 > s2 else b; l = b if s1 > s2 else a
-        sf_w.append(w); sf_l.append(l)
+    # Playoff
+    # Osmifinále (OF): D5 vs D12 (OF1), D6 vs D11 (OF2), D7 vs D10 (OF3), D8 vs D9 (OF4)
+    of_pairs = [(4,11), (5,10), (6,9), (7,8)]
+    of_results = {}
+    for i, (h, l) in enumerate(of_pairs):
+        t1, t2 = sd[h], sd[l]
+        s1, s2, rt = sim_match(t1, t2, seed + 100 + i)
+        winner = t1 if s1 > s2 else t2
+        of_results[i] = winner
+        matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": winner})
+
+    # Čtvrtfinále (ČF): D1 vs winner OF4, D2 vs winner OF3, D3 vs winner OF2, D4 vs winner OF1
+    qf_pairs = [(0, 3), (1, 2), (2, 1), (3, 0)] # Indexy: (D1-4, Index of_results)
+    qf_winners = []
+    for i, (d_idx, of_idx) in enumerate(qf_pairs):
+        t1, t2 = sd[d_idx], of_results[of_idx]
+        s1, s2, rt = sim_match(t1, t2, seed + 200 + i)
+        winner = t1 if s1 > s2 else t2
+        qf_winners.append(winner)
+        matches.append({"d": "Středa 18. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": winner})
+
+    # Semifinále (SF)
+    sf_winners, sf_losers = [], []
+    for i, (a, b) in enumerate([(qf_winners[0], qf_winners[3]), (qf_winners[1], qf_winners[2])]):
+        s1, s2, rt = sim_match(a, b, seed + 300 + i)
+        w, l = (a, b) if s1 > s2 else (b, a)
+        sf_winners.append(w); sf_losers.append(l)
         matches.append({"d": "Pátek 20. 2.", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"SF{i+1}", "w": w})
-    s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed + 400); bronze_w = sf_l[0] if s1 > s2 else sf_l[1]
-    matches.append({"d": "Sobota 21. 2.", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "BRONZ", "w": bronze_w})
-    s1, s2, rt = sim_match(sf_w[0], sf_w[1], seed + 500); gold_w = sf_w[0] if s1 > s2 else sf_w[1]
-    matches.append({"d": "Neděle 22. 2.", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "FINÁLE", "w": gold_w})
+
+    # Bronz
+    s1, s2, rt = sim_match(sf_losers[0], sf_losers[1], seed + 400)
+    bronze_w = sf_losers[0] if s1 > s2 else sf_losers[1]
+    matches.append({"d": "Sobota 21. 2.", "t1": sf_losers[0], "t2": sf_losers[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "BRONZ", "w": bronze_w})
+
+    # Finále
+    s1, s2, rt = sim_match(sf_winners[0], sf_winners[1], seed + 500)
+    gold_w = sf_winners[0] if s1 > s2 else sf_winners[1]
+    matches.append({"d": "Neděle 22. 2.", "t1": sf_winners[0], "t2": sf_winners[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "FINÁLE", "w": gold_w})
+    
     return matches
 
+# --- 5. STATISTIKA ---
 @st.cache_data
 def get_mc_stats(n_sims=10000):
     res_stats = {t: {"Gold": 0, "Silver": 0, "Bronze": 0, "G_Seeds": [], "M_Seeds": []} for t in team_powers}
     for i in range(1, n_sims + 1):
         tourney = run_tourney_cached(i)
-        gw = tourney[-1]["w"]; sw = tourney[-1]["t1"] if tourney[-1]["w"] == tourney[-1]["t2"] else tourney[-1]["t2"]; bw = tourney[-2]["w"]
+        gw = tourney[-1]["w"]
+        sw = tourney[-1]["t1"] if tourney[-1]["w"] == tourney[-1]["t2"] else tourney[-1]["t2"]
+        bw = tourney[-2]["w"]
         res_stats[gw]["Gold"] += 1; res_stats[sw]["Silver"] += 1; res_stats[bw]["Bronze"] += 1
         res_stats[gw]["G_Seeds"].append(i)
         for t in [gw, sw, bw]: res_stats[t]["M_Seeds"].append(i)
     df = pd.DataFrame.from_dict(res_stats, orient='index')
-    df["Zlato"] = (df["Gold"] / n_sims * 100); df["Stříbro"] = (df["Silver"] / n_sims * 100)
-    df["Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
+    df["Zlato"] = (df["Gold"] / n_sims * 100)
+    df["Stříbro"] = (df["Silver"] / n_sims * 100)
+    df["Bronz"] = (df["Bronze"] / n_sims * 100)
+    df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("Zlato", ascending=False), res_stats
 
-# --- UI ---
-tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zázraků"])
+# --- 6. UI ---
+tab1, tab2, tab3 = st.tabs(["Simulace", "Prediktor", "Hledač zázraků"])
 
 with tab1:
     c_ctrl1, c_ctrl2 = st.columns([1, 4])
@@ -175,6 +212,7 @@ with tab1:
         cols = st.columns(2)
         for i, m in enumerate(today):
             with cols[i % 2]:
+                # V UI v tab1 zobrazujeme PP/SN pod skóre
                 label = f"<span class='ot-label'>{m['rt']}</span>" if m["rt"] != "REG" else ""
                 st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>", unsafe_allow_html=True)
     else: st.info("Dnes se nehrají žádné zápasy.")
@@ -189,11 +227,30 @@ with tab1:
             with cols[gn]: st.write(f"**Skupina {gn}**"); st.table(df_g)
     else:
         c_of, c_qf, c_sf, c_fin = st.columns(4); po = [m for m in all_m if dates_list.index(m["d"]) <= date_idx and m["stg"]=="PO"]
-        for i, code in enumerate(["OF", "ČF", "SF", "Medal"]):
-            with [c_of, c_qf, c_sf, c_fin][i]:
-                st.write(f"**{['Osmifinále', 'Čtvrtfinále', 'Semifinále', 'Medaile'][i]}**")
-                for m in [x for x in po if code in x.get("lbl", "") or (code=="Medal" and x["stg"]=="PO" and x["lbl"] in ["BRONZ", "FINÁLE"])]:
-                    st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']} ({m['rt']})</b></div>", unsafe_allow_html=True)
+        # Osmifinále
+        with c_of:
+            st.write("**Osmifinále**")
+            for m in [x for x in po if "OF" in x["lbl"]]:
+                label = f" ({x['rt']})" if x["rt"] != "REG" else ""
+                st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{label}</b></div>", unsafe_allow_html=True)
+        # Čtvrtfinále
+        with c_qf:
+            st.write("**Čtvrtfinále**")
+            for m in [x for x in po if "ČF" in x["lbl"]]:
+                label = f" ({x['rt']})" if x["rt"] != "REG" else ""
+                st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{label}</b></div>", unsafe_allow_html=True)
+        # Semifinále
+        with c_sf:
+            st.write("**Semifinále**")
+            for m in [x for x in po if "SF" in x["lbl"]]:
+                label = f" ({x['rt']})" if x["rt"] != "REG" else ""
+                st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{label}</b></div>", unsafe_allow_html=True)
+        # Medaile
+        with c_fin:
+            st.write("**Medaile**")
+            for m in [x for x in po if x["lbl"] in ["BRONZ", "FINÁLE"]]:
+                label = f" ({x['rt']})" if x["rt"] != "REG" else ""
+                st.markdown(f"<div class='bracket-card'><b>{m['lbl']}</b><br>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{label}</b></div>", unsafe_allow_html=True)
 
 with tab2:
     st.header("Prediktor (10 000 simulací)")
@@ -203,13 +260,12 @@ with tab2:
     st.dataframe(mc_df[["Zlato", "Stříbro", "Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=455)
 
 with tab3:
-    st.header("Hledač hokejových zázraků")
+    st.header("🔍 Hledač hokejových zázraků")
     _, mc_raw = get_mc_stats(10000)
     look_team = st.selectbox("Vyber tým", options=list(team_powers.keys()))
     look_type = st.radio("Co hledáme?", ["Pouze Zlato", "Jakoukoliv medaili"])
     seeds_found = mc_raw[look_team]["G_Seeds"] if "Zlato" in look_type else mc_raw[look_team]["M_Seeds"]
     if seeds_found:
         st.success(f"Tým **{look_team}** splnil tento cíl v **{len(seeds_found)}** simulacích.")
-        if st.button("Vygeneruj ID zázraku"): st.info(f"Zázrak se stal v simulaci ID: **{random.choice(seeds_found)}**")
+        if st.button("Vygeneruj ID zázraku"): st.info(f"Zkus zadat Seed ID: **{random.choice(seeds_found)}**")
     else: st.error(f"Tým {look_team} v 10 000 simulacích tento cíl nesplnil.")
-        
