@@ -7,10 +7,11 @@ from functools import cmp_to_key
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
 
-# --- 2. DATA (Čekáme na reálnou neděli, zatím jen historie) ---
+# --- 2. DATA (Aktualizováno k play-off 16. 2. 2026) ---
+# Seřazeno podle kurzů a reálné formy v turnaji
 team_powers = {
     "Kanada": 99, "USA": 97, "Finsko": 91, "Švédsko": 90, 
-    "Švýcarsko": 88, "Česko": 87, "Slovensko": 85, "Německo": 75, 
+    "Švýcarsko": 88, "Slovensko": 85, "Česko": 83, "Německo": 75, 
     "Lotyšsko": 66, "Dánsko": 62, "Francie": 38, "Itálie": 35
 }
 
@@ -22,7 +23,10 @@ real_results = {
     ("Francie", "Česko"): (3, 6, "REG"), ("Kanada", "Švýcarsko"): (5, 1, "REG"),
     ("Německo", "Lotyšsko"): (3, 4, "REG"), ("Švédsko", "Slovensko"): (5, 3, "REG"),
     ("Finsko", "Itálie"): (11, 0, "REG"), ("USA", "Dánsko"): (6, 3, "REG"),
-    ("Švýcarsko", "Česko"): (4, 3, "PP")
+    ("Švýcarsko", "Česko"): (4, 3, "PP"),
+    ("Kanada", "Francie"): (10, 2, "REG"), # NOVÉ
+    ("Dánsko", "Lotyšsko"): (4, 2, "REG"), # NOVÉ
+    ("USA", "Německo"): (5, 1, "REG")   # NOVÉ
 }
 
 groups_def = {
@@ -34,7 +38,7 @@ groups_def = {
 dates_list = ["Středa 11. 2.", "Čtvrtek 12. 2.", "Pátek 13. 2.", "Sobota 14. 2.", "Neděle 15. 2.", 
               "Úterý 17. 2.", "Středa 18. 2.", "Pátek 20. 2.", "Sobota 21. 2.", "Neděle 22. 2."]
 
-# --- 3. CSS DESIGN (Vlastní Neon Heatmapa) ---
+# --- 3. CSS DESIGN ---
 st.markdown("""
 <style>
     .match-box {
@@ -57,7 +61,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. LOGIKA (VYVÁŽENÝ VZOREC) ---
+# --- 4. LOGIKA ---
 def sim_match(t1, t2, m_seed, is_playoff=False):
     if not is_playoff:
         if (t1, t2) in real_results: return real_results[(t1, t2)]
@@ -66,7 +70,6 @@ def sim_match(t1, t2, m_seed, is_playoff=False):
     random.seed(m_seed); np.random.seed(m_seed)
     p1, p2 = team_powers[t1], team_powers[t2]
     avg = 2.7
-    # Mocnina 1.15 = silný rozdíl, ale realistické skóre
     s1 = np.random.poisson(avg * (p1 / p2)**1.15)
     s2 = np.random.poisson(avg * (p2 / p1)**1.15)
     
@@ -117,7 +120,6 @@ def get_iihf_rankings(group_teams, group_matches):
 @st.cache_data
 def run_tourney_cached(seed):
     matches = []
-    # SKUPINY (Včetně simulace dnešní neděle)
     sched = [
         ("Středa 11. 2.", "Slovensko", "Finsko"), ("Středa 11. 2.", "Švédsko", "Itálie"),
         ("Čtvrtek 12. 2.", "Švýcarsko", "Francie"), ("Čtvrtek 12. 2.", "Česko", "Kanada"),
@@ -133,7 +135,7 @@ def run_tourney_cached(seed):
         s1, s2, rt = sim_match(t1, t2, seed + i, is_playoff=False)
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "G"})
 
-    # RANKING D1-D12
+    # GLOBAL SEEDING (D1-D12)
     group_rankings = []
     for gn, tms in groups_def.items():
         g_m = [m for m in matches if m["t1"] in tms]
@@ -147,22 +149,26 @@ def run_tourney_cached(seed):
     d10_12 = sorted([x for x in group_rankings if x["Pos"]==4], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     sd = [x["T"] for x in d1_3 + d4_6 + d7_9 + d10_12]
 
-    # PLAYOFF
-    of_pairs = [(4,11), (5,10), (6,9), (7,8)]
+    # PLAYOFF DVOJICE (OPRAVENO)
+    # OF1: D5(SUI) vs D12(ITA), OF2: D6(SWE) vs D11(FRA), OF3: D7(GER) vs D10(LAT), OF4: D8(CZE) vs D9(DEN)
+    # Pozor: Upraveno aby to odpovídalo tvým specifikovaným dvojicím playoff:
+    of_pairs = [("Švýcarsko", "Itálie"), ("Švédsko", "Lotyšsko"), ("Německo", "Francie"), ("Česko", "Dánsko")]
     of_res = {}
-    for i, (h, l) in enumerate(of_pairs):
-        t1, t2 = sd[h], sd[l]; s1, s2, rt = sim_match(t1, t2, seed + 100 + i, is_playoff=True)
+    for i, (t1, t2) in enumerate(of_pairs):
+        s1, s2, rt = sim_match(t1, t2, seed + 100 + i, is_playoff=True)
         w = t1 if s1 > s2 else t2; of_res[i] = w
         matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": w})
 
-    qf_pairs = [(0, 3), (1, 2), (2, 1), (3, 0)]
+    # ČF: D1(CAN) vs CZE/DEN, D2(USA) vs SWE/LAT, D3(SVK) vs GER/FRA, D4(FIN) vs SUI/ITA
+    qf_pairs = [("Kanada", of_res[3]), ("USA", of_res[1]), ("Slovensko", of_res[2]), ("Finsko", of_res[0])]
     qf_w = []
-    for i, (d_idx, of_idx) in enumerate(qf_pairs):
-        t1, t2 = sd[d_idx], of_res[of_idx]; s1, s2, rt = sim_match(t1, t2, seed + 200 + i, is_playoff=True)
+    for i, (t1, t2) in enumerate(qf_pairs):
+        s1, s2, rt = sim_match(t1, t2, seed + 200 + i, is_playoff=True)
         w = t1 if s1 > s2 else t2; qf_w.append(w)
         matches.append({"d": "Středa 18. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": w})
 
     sf_w, sf_l = [], []
+    # SF: CAN/CZE/DEN vs FIN/SUI/ITA | USA/SWE/LAT vs SVK/GER/FRA
     for i, (a, b) in enumerate([(qf_w[0], qf_w[3]), (qf_w[1], qf_w[2])]):
         s1, s2, rt = sim_match(a, b, seed + 300 + i, is_playoff=True); w, l = (a, b) if s1 > s2 else (b, a)
         sf_w.append(w); sf_l.append(l)
@@ -235,7 +241,6 @@ with tab2:
     st.header("📈 Prediktor")
     mc_df, _ = get_mc_stats(10000)
     from matplotlib.colors import LinearSegmentedColormap
-    # Zářivá zelená z obrázku: #00ff00
     custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
     st.dataframe(mc_df[["🥇 Zlato", "🥈 Stříbro", "🥉 Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=455)
 
@@ -244,8 +249,8 @@ with tab3:
     _, raw = get_mc_stats(10000)
     look_t = st.selectbox("Vyber tým", options=list(team_powers.keys()))
     look_ty = st.radio("Cíl", ["🥇 Pouze Zlato", "🥉 Jakákoliv medaile"])
-    f_seeds = raw[look_t]["G_Seeds"] if "Zlato" in look_ty else raw[look_t]["M_Seeds"]
-    if f_seeds:
-        st.success(f"Tým {look_t} uspěl v {len(f_seeds)} simulacích."); 
-        if st.button("Najdi ID zázraku"): st.info(f"Seed: **{random.choice(f_seeds)}**")
+    f_list = raw[look_t]["G_Seeds"] if "Zlato" in look_ty else raw[look_t]["M_Seeds"]
+    if f_list:
+        st.success(f"Tým {look_t} uspěl v {len(f_list)} simulacích."); 
+        if st.button("Najdi ID zázraku"): st.info(f"Seed: **{random.choice(f_list)}**")
     else: st.error("Nenalezeno.")
