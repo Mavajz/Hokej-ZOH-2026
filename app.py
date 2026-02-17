@@ -7,10 +7,10 @@ from functools import cmp_to_key
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
 
-# --- 2. DATA (Aktuální síla podle kurzů k 16. 2. 2026) ---
+# --- 2. DATA (Rekalibrace před Čtvrtfinále - 17. 2. 2026) ---
 team_powers = {
     "Kanada": 99, "USA": 97, "Finsko": 91, "Švédsko": 90, 
-    "Švýcarsko": 88, "Slovensko": 85, "Česko": 83, "Německo": 75, 
+    "Švýcarsko": 87, "Slovensko": 84, "Německo": 84, "Česko": 83, # GER s SVK jsou teď nastejno
     "Lotyšsko": 66, "Dánsko": 62, "Francie": 38, "Itálie": 35
 }
 
@@ -22,10 +22,11 @@ real_results = {
     ("Francie", "Česko"): (3, 6, "REG"), ("Kanada", "Švýcarsko"): (5, 1, "REG"),
     ("Německo", "Lotyšsko"): (3, 4, "REG"), ("Švédsko", "Slovensko"): (5, 3, "REG"),
     ("Finsko", "Itálie"): (11, 0, "REG"), ("USA", "Dánsko"): (6, 3, "REG"),
-    ("Švýcarsko", "Česko"): (4, 3, "PP"),
-    ("Kanada", "Francie"): (10, 2, "REG"),
-    ("Dánsko", "Lotyšsko"): (4, 2, "REG"),
-    ("USA", "Německo"): (5, 1, "REG")
+    ("Švýcarsko", "Česko"): (4, 3, "PP"), ("Kanada", "Francie"): (10, 2, "REG"),
+    ("Dánsko", "Lotyšsko"): (4, 2, "REG"), ("USA", "Německo"): (5, 1, "REG"),
+    # OSMIFINÁLE
+    ("Německo", "Francie"): (5, 1, "REG"), # NOVÉ
+    ("Švýcarsko", "Itálie"): (3, 0, "REG")  # NOVÉ
 }
 
 groups_def = {
@@ -121,6 +122,7 @@ def get_iihf_rankings(group_teams, group_matches):
 @st.cache_data
 def run_tourney_cached(seed):
     matches = []
+    # Základní program
     sched = [
         ("Středa 11. 2.", "Slovensko", "Finsko"), ("Středa 11. 2.", "Švédsko", "Itálie"),
         ("Čtvrtek 12. 2.", "Švýcarsko", "Francie"), ("Čtvrtek 12. 2.", "Česko", "Kanada"),
@@ -136,7 +138,7 @@ def run_tourney_cached(seed):
         s1, s2, rt = sim_match(t1, t2, seed * 100 + i, is_playoff=False)
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "G"})
 
-    # RANKING D1-D12
+    # GLOBAL SEEDING
     group_rankings = []
     for gn, tms in groups_def.items():
         g_m = [m for m in matches if m["t1"] in tms]
@@ -166,14 +168,9 @@ def run_tourney_cached(seed):
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
         matches.append({"d": "Středa 18. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": w})
 
-    # --- OPRAVA: SEMIFINAL RE-SEEDING ---
-    # Seřadíme čtyři vítěze ČF podle jejich původního nasazení v žebříčku 'sd'
+    # SF (Re-seeding)
     sf_seeded = sorted(qf_winners, key=lambda t: sd.index(t))
-    
-    # SF1: Nejlepší (index 0) vs Nejslabší (index 3)
-    # SF2: Druhý nejlepší (index 1) vs Druhý nejslabší (index 2)
     sf_pairs = [(sf_seeded[0], sf_seeded[3]), (sf_seeded[1], sf_seeded[2])]
-    
     sf_w, sf_l = [], []
     for i, (a, b) in enumerate(sf_pairs):
         s1, s2, rt = sim_match(a, b, seed * 100 + 40 + i, is_playoff=True)
@@ -181,13 +178,14 @@ def run_tourney_cached(seed):
         sf_w.append(w); sf_l.append(l)
         matches.append({"d": "Pátek 20. 2.", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"SF{i+1}", "w": w})
 
-    # BRONZ & FINÁLE
+    # Medaile
     s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed * 100 + 50, is_playoff=True)
     matches.append({"d": "Sobota 21. 2.", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "BRONZ", "w": sf_l[0] if s1>s2 else sf_l[1]})
     s1, s2, rt = sim_match(sf_w[0], sf_w[1], seed * 100 + 60, is_playoff=True)
     matches.append({"d": "Neděle 22. 2.", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "FINÁLE", "w": sf_w[0] if s1>s2 else sf_w[1]})
     return matches
 
+# --- 5. STATISTIKA ---
 @st.cache_data
 def get_mc_stats(n_sims=10000):
     res_stats = {t: {"Gold": 0, "Silver": 0, "Bronze": 0, "G_Seeds": [], "M_Seeds": []} for t in team_powers}
@@ -202,13 +200,13 @@ def get_mc_stats(n_sims=10000):
     df["🥉 Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("🥇 Zlato", ascending=False), res_stats
 
-# --- UI ---
+# --- 6. UI ---
 tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zázraků"])
 
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Osa turnaje", options=dates_list)
+    with c2: sel_date = st.select_slider("Osa turnaje", options=dates_list, value="Úterý 17. 2.")
     all_m = run_tourney_cached(seed); date_idx = dates_list.index(sel_date)
     today = [m for m in all_m if m["d"] == sel_date]
     if today:
@@ -217,7 +215,6 @@ with tab1:
             with cols[i % 2]:
                 label = f"<span class='ot-label'>{m['rt']}</span>" if m["rt"] != "REG" else ""
                 st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>", unsafe_allow_html=True)
-    else: st.info("Dnes se nehrají zápasy.")
     st.markdown("---")
     if date_idx <= 4:
         cols_g = st.columns(3); mapping = {"A": cols_g[0], "B": cols_g[1], "C": cols_g[2]}
@@ -261,9 +258,5 @@ with tab3:
     f_seeds = mc_raw[look_t]["G_Seeds"] if "Zlato" in look_ty else mc_raw[look_t]["M_Seeds"]
     if f_seeds:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
-        if st.button("Vygeneruj náhodné ID zázraku"):
-            lucky = random.choice(f_seeds)
-            st.info(f"Zázrak se stal v simulaci ID: **{lucky}**")
-            st.write("Teď toto číslo přepiš v první záložce 'Simulace'!")
-    else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
-        
+        if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
+    else: st.error("Nenalezeno.")
