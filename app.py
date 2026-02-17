@@ -6,48 +6,34 @@ from functools import cmp_to_key
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
-APP_VERSION = "4.2-ODDS-UPDATE"
+APP_VERSION = "4.3-QF-READY"
 
-# --- 2. DATA (Power Ranking podle kurzů z 17. 2. večer) ---
-# Kanada 1.72 -> 99
-# USA 3.2 -> 97
-# Finsko 11 -> 92
-# Švédsko 14 -> 91
-# Švýcarsko 23 -> 88
-# Česko 35 -> 85 (Zvýšeno, bookmakeři jim věří i přes těžký los)
-# Slovensko 35 -> 85
-# Německo 50 -> 83
+# --- 2. DATA (Power Ranking podle kurzů na ČF) ---
+# CZE sníženo na 81 kvůli kurzu 13.00 proti CAN
+# GER (84) mírně nad SVK (83) kvůli kurzu 2.43 vs 2.51
 team_powers_db = {
-    "Kanada": 99, "USA": 97, "Finsko": 92, "Švédsko": 91, 
-    "Švýcarsko": 88, "Česko": 85, "Slovensko": 85, "Německo": 83, 
+    "Kanada": 99, "USA": 97, "Finsko": 92, "Švédsko": 90, 
+    "Švýcarsko": 87, "Německo": 84, "Slovensko": 83, "Česko": 81, 
     "Lotyšsko": 66, "Dánsko": 62, "Francie": 38, "Itálie": 35
 }
 
 # REÁLNÉ VÝSLEDKY
 results_db = {
-    ("Slovensko", "Finsko", "G"): (4, 1, "REG"),
-    ("Švédsko", "Itálie", "G"): (5, 2, "REG"),
-    ("Švýcarsko", "Francie", "G"): (4, 0, "REG"),
-    ("Česko", "Kanada", "G"): (0, 5, "REG"),
-    ("Lotyšsko", "USA", "G"): (1, 5, "REG"),
-    ("Německo", "Dánsko", "G"): (3, 1, "REG"),
-    ("Finsko", "Švédsko", "G"): (4, 1, "REG"),
-    ("Itálie", "Slovensko", "G"): (2, 3, "REG"),
-    ("Francie", "Česko", "G"): (3, 6, "REG"),
-    ("Kanada", "Švýcarsko", "G"): (5, 1, "REG"),
-    ("Německo", "Lotyšsko", "G"): (3, 4, "REG"),
-    ("Švédsko", "Slovensko", "G"): (5, 3, "REG"),
-    ("Finsko", "Itálie", "G"): (11, 0, "REG"),
-    ("USA", "Dánsko", "G"): (6, 3, "REG"),
-    ("Švýcarsko", "Česko", "G"): (4, 3, "PP"),
-    ("Kanada", "Francie", "G"): (10, 2, "REG"),
-    ("Dánsko", "Lotyšsko", "G"): (4, 2, "REG"),
-    ("USA", "Německo", "G"): (5, 1, "REG"),
+    ("Slovensko", "Finsko", "G"): (4, 1, "REG"), ("Švédsko", "Itálie", "G"): (5, 2, "REG"),
+    ("Švýcarsko", "Francie", "G"): (4, 0, "REG"), ("Česko", "Kanada", "G"): (0, 5, "REG"),
+    ("Lotyšsko", "USA", "G"): (1, 5, "REG"), ("Německo", "Dánsko", "G"): (3, 1, "REG"),
+    ("Finsko", "Švédsko", "G"): (4, 1, "REG"), ("Itálie", "Slovensko", "G"): (2, 3, "REG"),
+    ("Francie", "Česko", "G"): (3, 6, "REG"), ("Kanada", "Švýcarsko", "G"): (5, 1, "REG"),
+    ("Německo", "Lotyšsko", "G"): (3, 4, "REG"), ("Švédsko", "Slovensko", "G"): (5, 3, "REG"),
+    ("Finsko", "Itálie", "G"): (11, 0, "REG"), ("USA", "Dánsko", "G"): (6, 3, "REG"),
+    ("Švýcarsko", "Česko", "G"): (4, 3, "PP"), ("Kanada", "Francie", "G"): (10, 2, "REG"),
+    ("Dánsko", "Lotyšsko", "G"): (4, 2, "REG"), ("USA", "Německo", "G"): (5, 1, "REG"),
     # --- PLAY-OFF (OF) ---
     ("Německo", "Francie", "PO"): (5, 1, "REG"),
     ("Švýcarsko", "Itálie", "PO"): (3, 0, "REG"),
     ("Česko", "Dánsko", "PO"): (3, 2, "REG"),
-    # ("Švédsko", "Lotyšsko", "PO"): (x, y, "REG") <-- Čekáme
+    ("Švédsko", "Lotyšsko", "PO"): (5, 1, "REG"),
+    # Čtvrtfinále čeká na výsledek...
 }
 
 groups_def = {
@@ -163,13 +149,14 @@ def run_tourney_cached(seed, powers, db, version):
         sorted_tms, stats = get_iihf_rankings(tms, g_m)
         for i, t in enumerate(sorted_tms):
             group_rankings.append({"T": t, "Pos": i+1, "B": stats[t]["B"], "D": stats[t]["GF"]-stats[t]["GA"], "GF": stats[t]["GF"]})
+    
     d1_3 = sorted([x for x in group_rankings if x["Pos"]==1], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     d4_6 = sorted([x for x in group_rankings if x["Pos"]==2], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     d7_9 = sorted([x for x in group_rankings if x["Pos"]==3], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     d10_12 = sorted([x for x in group_rankings if x["Pos"]==4], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     sd = [x["T"] for x in d1_3 + d4_6 + d7_9 + d10_12]
 
-    # OF
+    # OF (Proběhlo)
     of_pairs = [("Švýcarsko", "Itálie"), ("Švédsko", "Lotyšsko"), ("Německo", "Francie"), ("Česko", "Dánsko")]
     of_res = {}
     for i, (t1, t2) in enumerate(of_pairs):
@@ -177,17 +164,18 @@ def run_tourney_cached(seed, powers, db, version):
         w = t1 if s1 > s2 else t2; of_res[i] = w
         matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": w})
 
-    # ČF
-    qf_pairs = [("Kanada", of_res[3]), ("USA", of_res[1]), ("Slovensko", of_res[2]), ("Finsko", of_res[0])]
+    # ČF (Pevně dané dvojice)
+    qf_pairs = [("Slovensko", "Německo"), ("Kanada", "Česko"), ("Finsko", "Švýcarsko"), ("USA", "Švédsko")]
     qf_winners = []
     for i, (t1, t2) in enumerate(qf_pairs):
         s1, s2, rt = sim_match(t1, t2, seed * 100 + 30 + i, powers, db, "PO")
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
         matches.append({"d": "Středa 18. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": w})
 
-    # SF (Re-seeding)
-    sf_seeded = sorted(qf_winners, key=lambda t: sd.index(t))
+    # SF (Re-seeding podle žebříčku sd)
+    sf_seeded = sorted(qf_winners, key=lambda t: sd.index(t) if t in sd else 99)
     while len(sf_seeded) < 4: sf_seeded.append("TBD")
+    
     sf_pairs = [(sf_seeded[0], sf_seeded[3]), (sf_seeded[1], sf_seeded[2])]
     sf_w, sf_l = [], []
     for i, (a, b) in enumerate(sf_pairs):
@@ -230,7 +218,7 @@ tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zá
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Osa turnaje", options=dates_list, value="Úterý 17. 2.")
+    with c2: sel_date = st.select_slider("Osa turnaje", options=dates_list, value="Středa 18. 2.")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     date_idx = dates_list.index(sel_date)
     today = [m for m in all_m if m["d"] == sel_date]
