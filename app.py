@@ -11,7 +11,7 @@ APP_VERSION = "4.0-FINAL"
 # --- 2. DATA (Power Ranking podle aktuálních kurzů) ---
 team_powers_db = {
     "Kanada": 99, "USA": 97, "Finsko": 91, "Švédsko": 90, 
-    "Švýcarsko": 88, "Slovensko": 85, "Německo": 84, "Česko": 83, 
+    "Švýcarsko": 87, "Slovensko": 84, "Německo": 84, "Česko": 86, 
     "Lotyšsko": 66, "Dánsko": 62, "Francie": 38, "Itálie": 35
 }
 
@@ -274,3 +274,4 @@ with tab3:
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Nenalezeno.")
         
+
