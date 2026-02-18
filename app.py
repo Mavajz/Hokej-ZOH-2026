@@ -6,12 +6,12 @@ from functools import cmp_to_key
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
-APP_VERSION = "4.6-FIN-ESCAPE"
+APP_VERSION = "4.7-SEMIFINALS"
 
-# --- 2. DATA ---
+# --- 2. DATA (Power Ranking podle semifinálových kurzů) ---
 team_powers_db = {
-    "Kanada": 99, "USA": 97, "Finsko": 92, "Slovensko": 92, 
-    "Švédsko": 90, "Švýcarsko": 86, "Česko": 81, "Německo": 80, 
+    "Kanada": 99, "USA": 98, "Finsko": 91, "Slovensko": 89, 
+    "Švédsko": 90, "Švýcarsko": 86, "Německo": 84, "Česko": 81, 
     "Lotyšsko": 66, "Dánsko": 62, "Francie": 38, "Itálie": 35
 }
 
@@ -35,8 +35,8 @@ results_db = {
     # PLAY-OFF (ČF)
     ("Slovensko", "Německo", "PO"): (6, 2, "REG"),
     ("Kanada", "Česko", "PO"): (4, 3, "PP"),
-    ("Finsko", "Švýcarsko", "PO"): (3, 2, "PP"), # COMEBACK!
-    # ("USA", "Švédsko", "PO"): (x, y, "REG") <-- Čekáme na poslední výsledek
+    ("Finsko", "Švýcarsko", "PO"): (3, 2, "PP"),
+    ("USA", "Švédsko", "PO"): (2, 1, "PP"), # USA POSTUPUJE!
 }
 
 groups_def = {
@@ -158,7 +158,7 @@ def run_tourney_cached(seed, powers, db, version):
     d10_12 = sorted([x for x in group_rankings if x["Pos"]==4], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     sd = [x["T"] for x in d1_3 + d4_6 + d7_9 + d10_12]
 
-    # OF (Reálné)
+    # OF
     of_pairs = [("Švýcarsko", "Itálie"), ("Švédsko", "Lotyšsko"), ("Německo", "Francie"), ("Česko", "Dánsko")]
     of_res = {}
     for i, (t1, t2) in enumerate(of_pairs):
@@ -166,7 +166,7 @@ def run_tourney_cached(seed, powers, db, version):
         w = t1 if s1 > s2 else t2; of_res[i] = w
         matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": w})
 
-    # ČF (Reálné + USA čeká)
+    # ČF
     qf_pairs = [("Kanada", of_res[3]), ("USA", of_res[1]), ("Slovensko", of_res[2]), ("Finsko", of_res[0])]
     qf_winners = []
     for i, (t1, t2) in enumerate(qf_pairs):
@@ -174,7 +174,7 @@ def run_tourney_cached(seed, powers, db, version):
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
         matches.append({"d": "Středa 18. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": w})
 
-    # SF (Re-seeding)
+    # SF (Re-seeding: 1v4, 2v3 z postupujících podle rankingového klíče D1-D12)
     sf_seeded = sorted(qf_winners, key=lambda t: sd.index(t) if t in sd else 99)
     while len(sf_seeded) < 4: sf_seeded.append("TBD")
     
@@ -220,7 +220,7 @@ tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zá
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Osa turnaje", options=dates_list, value="Středa 18. 2.")
+    with c2: sel_date = st.select_slider("Osa turnaje", options=dates_list, value="Pátek 20. 2.")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     date_idx = dates_list.index(sel_date)
     today = [m for m in all_m if m["d"] == sel_date]
@@ -228,7 +228,7 @@ with tab1:
         cols = st.columns(2)
         for i, m in enumerate(today):
             with cols[i % 2]:
-                label = f"<span class='ot-label'>{m['rt']}</span>" if m['rt'] != "REG" else ""
+                label = f"<span class='ot-label'>{m['rt']}</span>" if m["rt"] != "REG" else ""
                 st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>", unsafe_allow_html=True)
     st.markdown("---")
     if date_idx <= 4:
@@ -275,3 +275,4 @@ with tab3:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
+        
