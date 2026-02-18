@@ -6,7 +6,7 @@ from functools import cmp_to_key
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
-APP_VERSION = "4.5-CAN-SURVIVES"
+APP_VERSION = "4.6-FIN-ESCAPE"
 
 # --- 2. DATA ---
 team_powers_db = {
@@ -34,7 +34,9 @@ results_db = {
     ("Švédsko", "Lotyšsko", "PO"): (5, 1, "REG"),
     # PLAY-OFF (ČF)
     ("Slovensko", "Německo", "PO"): (6, 2, "REG"),
-    ("Kanada", "Česko", "PO"): (4, 3, "PP"), # DRAMA!
+    ("Kanada", "Česko", "PO"): (4, 3, "PP"),
+    ("Finsko", "Švýcarsko", "PO"): (3, 2, "PP"), # COMEBACK!
+    # ("USA", "Švédsko", "PO"): (x, y, "REG") <-- Čekáme na poslední výsledek
 }
 
 groups_def = {
@@ -164,7 +166,7 @@ def run_tourney_cached(seed, powers, db, version):
         w = t1 if s1 > s2 else t2; of_res[i] = w
         matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": w})
 
-    # ČF (Mix reálných a simulace)
+    # ČF (Reálné + USA čeká)
     qf_pairs = [("Kanada", of_res[3]), ("USA", of_res[1]), ("Slovensko", of_res[2]), ("Finsko", of_res[0])]
     qf_winners = []
     for i, (t1, t2) in enumerate(qf_pairs):
@@ -212,7 +214,7 @@ def get_mc_stats(n_sims, powers, db, version):
     df["🥉 Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("🥇 Zlato", ascending=False), res_stats
 
-# --- UI ---
+# --- 6. UI ---
 tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zázraků"])
 
 with tab1:
