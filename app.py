@@ -6,14 +6,13 @@ from functools import cmp_to_key
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="ZOH 2026 Simulator", layout="wide", page_icon="🏒")
-APP_VERSION = "4.3-QF-READY"
+APP_VERSION = "4.4-SVK-SEMIFINAL"
 
-# --- 2. DATA (Power Ranking podle kurzů na ČF) ---
-# CZE sníženo na 81 kvůli kurzu 13.00 proti CAN
-# GER (84) mírně nad SVK (83) kvůli kurzu 2.43 vs 2.51
+# --- 2. DATA (Power Ranking podle kurzů po postupu Slovenska) ---
+# SVK (92) přeskočilo SWE (90) a dotáhlo se na FIN (92)
 team_powers_db = {
-    "Kanada": 99, "USA": 97, "Finsko": 92, "Švédsko": 90, 
-    "Švýcarsko": 87, "Německo": 84, "Slovensko": 83, "Česko": 81, 
+    "Kanada": 99, "USA": 97, "Finsko": 92, "Slovensko": 92, 
+    "Švédsko": 90, "Švýcarsko": 86, "Česko": 81, "Německo": 80, 
     "Lotyšsko": 66, "Dánsko": 62, "Francie": 38, "Itálie": 35
 }
 
@@ -33,7 +32,8 @@ results_db = {
     ("Švýcarsko", "Itálie", "PO"): (3, 0, "REG"),
     ("Česko", "Dánsko", "PO"): (3, 2, "REG"),
     ("Švédsko", "Lotyšsko", "PO"): (5, 1, "REG"),
-    # Čtvrtfinále čeká na výsledek...
+    # --- ČTVRTFINÁLE ---
+    ("Slovensko", "Německo", "PO"): (6, 2, "REG"), # HOT!
 }
 
 groups_def = {
@@ -156,7 +156,7 @@ def run_tourney_cached(seed, powers, db, version):
     d10_12 = sorted([x for x in group_rankings if x["Pos"]==4], key=lambda x: (x["B"], x["D"], x["GF"]), reverse=True)
     sd = [x["T"] for x in d1_3 + d4_6 + d7_9 + d10_12]
 
-    # OF (Proběhlo)
+    # OF (Reálné)
     of_pairs = [("Švýcarsko", "Itálie"), ("Švédsko", "Lotyšsko"), ("Německo", "Francie"), ("Česko", "Dánsko")]
     of_res = {}
     for i, (t1, t2) in enumerate(of_pairs):
@@ -164,8 +164,8 @@ def run_tourney_cached(seed, powers, db, version):
         w = t1 if s1 > s2 else t2; of_res[i] = w
         matches.append({"d": "Úterý 17. 2.", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"OF{i+1}", "w": w})
 
-    # ČF (Pevně dané dvojice)
-    qf_pairs = [("Slovensko", "Německo"), ("Kanada", "Česko"), ("Finsko", "Švýcarsko"), ("USA", "Švédsko")]
+    # ČF (Mix reálných a simulovaných)
+    qf_pairs = [("Kanada", of_res[3]), ("USA", of_res[1]), ("Slovensko", of_res[2]), ("Finsko", of_res[0])]
     qf_winners = []
     for i, (t1, t2) in enumerate(qf_pairs):
         s1, s2, rt = sim_match(t1, t2, seed * 100 + 30 + i, powers, db, "PO")
@@ -273,3 +273,4 @@ with tab3:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
+    
