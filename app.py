@@ -2,32 +2,35 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import random
-import itertools
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator", layout="wide", page_icon="🏒")
-APP_VERSION = "5.0-MS-TEMPLATE"
+APP_VERSION = "5.2-MS-FULL-SCHEDULE"
 
-# --- 2. DATA (Týmy a orientační Power Ranking - nutno upravit podle kurzů!) ---
+# --- 2. DATA (Týmy a orientační Power Ranking) ---
 team_powers_db = {
-    # Skupina A (Příklad)
-    "Kanada": 99, "Švýcarsko": 88, "Česko": 85, "Slovensko": 82, 
-    "Lotyšsko": 66, "Rakousko": 55, "Francie": 40, "Polsko": 30,
-    # Skupina B (Příklad)
-    "USA": 97, "Švédsko": 92, "Finsko": 91, "Německo": 84, 
-    "Dánsko": 62, "Norsko": 58, "Kazachstán": 45, "Maďarsko": 25
+    # Skupina A
+    "USA": 97, "Finsko": 92, "Švýcarsko": 88, "Německo": 84, 
+    "Lotyšsko": 66, "Rakousko": 55, "Velká Británie": 30, "Maďarsko": 25,
+    # Skupina B
+    "Kanada": 99, "Švédsko": 91, "Česko": 85, "Slovensko": 85, 
+    "Dánsko": 62, "Norsko": 58, "Slovinsko": 45, "Itálie": 35
 }
 
 groups_def = {
-    "A": ["Kanada", "Švýcarsko", "Česko", "Slovensko", "Lotyšsko", "Rakousko", "Francie", "Polsko"],
-    "B": ["USA", "Švédsko", "Finsko", "Německo", "Dánsko", "Norsko", "Kazachstán", "Maďarsko"]
+    "A": ["Finsko", "Německo", "Švýcarsko", "USA", "Rakousko", "Velká Británie", "Maďarsko", "Lotyšsko"],
+    "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-# Zde budeme postupně zapisovat reálné výsledky turnaje
+# Zde budeme postupně zapisovat reálné výsledky
 results_db = {}
 
-# Vygenerování mock rozpisu, dokud nebudeme mít reálný
-dates_list = [f"Den {i}" for i in range(1, 15)]
+dates_list = [
+    "Pátek 15. května", "Sobota 16. května", "Neděle 17. května", "Pondělí 18. května",
+    "Úterý 19. května", "Středa 20. května", "Čtvrtek 21. května", "Pátek 22. května",
+    "Sobota 23. května", "Neděle 24. května", "Pondělí 25. května", "Úterý 26. května",
+    "Čtvrtek 28. května (ČF)", "Sobota 30. května (SF)", "Neděle 31. května (Medaile)"
+]
 
 # --- 3. CSS DESIGN ---
 st.markdown("""
@@ -111,20 +114,57 @@ def get_iihf_rankings(group_teams, group_matches):
 def run_tourney_cached(seed, powers, db, version):
     matches = []
     
-    # 1. GENERACE SKUPINOVÉ FÁZE (Každý s každým ve skupině)
-    g_match_id = 0
-    for gn, tms in groups_def.items():
-        group_pairs = list(itertools.combinations(tms, 2))
-        for t1, t2 in group_pairs:
-            g_match_id += 1
-            # Pro zjednodušení šablony dáváme fake datumy
-            fake_date = dates_list[(g_match_id % 7)]
-            s1, s2, rt = sim_match(t1, t2, seed * 1000 + g_match_id, powers, db, "G")
-            matches.append({"d": fake_date, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
+    # 1. GENERACE SKUPINOVÉ FÁZE
+    sched = [
+        # 15. května
+        ("Pátek 15. května", "Finsko", "Německo", "A"), ("Pátek 15. května", "Švédsko", "Kanada", "B"),
+        ("Pátek 15. května", "Švýcarsko", "USA", "A"), ("Pátek 15. května", "Dánsko", "Česko", "B"),
+        # 16. května
+        ("Sobota 16. května", "Rakousko", "Velká Británie", "A"), ("Sobota 16. května", "Slovensko", "Norsko", "B"),
+        ("Sobota 16. května", "Finsko", "Maďarsko", "A"), ("Sobota 16. května", "Kanada", "Itálie", "B"),
+        ("Sobota 16. května", "Švýcarsko", "Lotyšsko", "A"), ("Sobota 16. května", "Slovinsko", "Česko", "B"),
+        # 17. května
+        ("Neděle 17. května", "USA", "Velká Británie", "A"), ("Neděle 17. května", "Itálie", "Slovensko", "B"),
+        ("Neděle 17. května", "Rakousko", "Maďarsko", "A"), ("Neděle 17. května", "Švédsko", "Dánsko", "B"),
+        ("Neděle 17. května", "Německo", "Lotyšsko", "A"), ("Neděle 17. května", "Norsko", "Slovinsko", "B"),
+        # 18. května
+        ("Pondělí 18. května", "Finsko", "USA", "A"), ("Pondělí 18. května", "Kanada", "Dánsko", "B"),
+        ("Pondělí 18. května", "Švýcarsko", "Německo", "A"), ("Pondělí 18. května", "Česko", "Švédsko", "B"),
+        # 19. května
+        ("Úterý 19. května", "Lotyšsko", "Rakousko", "A"), ("Úterý 19. května", "Itálie", "Norsko", "B"),
+        ("Úterý 19. května", "Maďarsko", "Velká Británie", "A"), ("Úterý 19. května", "Slovinsko", "Slovensko", "B"),
+        # 20. května
+        ("Středa 20. května", "Švýcarsko", "Rakousko", "A"), ("Středa 20. května", "Česko", "Itálie", "B"),
+        ("Středa 20. května", "USA", "Německo", "A"), ("Středa 20. května", "Švédsko", "Slovinsko", "B"),
+        # 21. května
+        ("Čtvrtek 21. května", "Finsko", "Lotyšsko", "A"), ("Čtvrtek 21. května", "Norsko", "Kanada", "B"),
+        ("Čtvrtek 21. května", "Švýcarsko", "Velká Británie", "A"), ("Čtvrtek 21. května", "Dánsko", "Slovensko", "B"),
+        # 22. května
+        ("Pátek 22. května", "Maďarsko", "Německo", "A"), ("Pátek 22. května", "Kanada", "Slovinsko", "B"),
+        ("Pátek 22. května", "Finsko", "Velká Británie", "A"), ("Pátek 22. května", "Itálie", "Švédsko", "B"),
+        # 23. května
+        ("Sobota 23. května", "USA", "Lotyšsko", "A"), ("Sobota 23. května", "Dánsko", "Slovinsko", "B"),
+        ("Sobota 23. května", "Švýcarsko", "Maďarsko", "A"), ("Sobota 23. května", "Slovensko", "Česko", "B"),
+        ("Sobota 23. května", "Německo", "Rakousko", "A"), ("Sobota 23. května", "Švédsko", "Norsko", "B"),
+        # 24. května
+        ("Neděle 24. května", "Lotyšsko", "Velká Británie", "A"), ("Neděle 24. května", "Dánsko", "Itálie", "B"),
+        ("Neděle 24. května", "Finsko", "Rakousko", "A"), ("Neděle 24. května", "Kanada", "Slovensko", "B"),
+        # 25. května
+        ("Pondělí 25. května", "USA", "Maďarsko", "A"), ("Pondělí 25. května", "Česko", "Norsko", "B"),
+        ("Pondělí 25. května", "Německo", "Velká Británie", "A"), ("Pondělí 25. května", "Slovinsko", "Itálie", "B"),
+        # 26. května
+        ("Úterý 26. května", "Maďarsko", "Lotyšsko", "A"), ("Úterý 26. května", "Norsko", "Dánsko", "B"),
+        ("Úterý 26. května", "USA", "Rakousko", "A"), ("Úterý 26. května", "Slovensko", "Švédsko", "B"),
+        ("Úterý 26. května", "Švýcarsko", "Finsko", "A"), ("Úterý 26. května", "Česko", "Kanada", "B"),
+    ]
+
+    for i, (d, t1, t2, gn) in enumerate(sched):
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, "G")
+        matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
 
     # 2. TABULKY A POSTUPUJÍCÍ
     group_rankings = {"A": [], "B": []}
-    global_seed_stats = {} # Pro re-seeding v SF
+    global_seed_stats = {} 
     
     for gn in ["A", "B"]:
         g_m = [m for m in matches if m["stg"] == f"G{gn}"]
@@ -133,42 +173,43 @@ def run_tourney_cached(seed, powers, db, version):
         for i, t in enumerate(sorted_tms):
             global_seed_stats[t] = {"Pos": i+1, "B": stats[t]["B"], "D": stats[t]["GF"]-stats[t]["GA"], "GF": stats[t]["GF"]}
 
-    # ČTVRTFINÁLE (Křížem)
+    # 3. ČTVRTFINÁLE
     A = group_rankings["A"]
     B = group_rankings["B"]
     qf_pairs = [(A[0], B[3]), (B[0], A[3]), (A[1], B[2]), (B[1], A[2])]
+    qf_labels = ["ČF1 (16:15, Curych)", "ČF2 (16:15, Fribourg)", "ČF3 (20:15, Curych)", "ČF4 (20:15, Fribourg)"]
     qf_winners = []
     
     for i, (t1, t2) in enumerate(qf_pairs):
         s1, s2, rt = sim_match(t1, t2, seed * 1000 + 100 + i, powers, db, "PO")
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
-        matches.append({"d": "ČF Den", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"ČF{i+1}", "w": w})
+        matches.append({"d": "Čtvrtek 28. května (ČF)", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": qf_labels[i], "w": w})
 
-    # SEMIFINÁLE (Re-seeding podle výkonů ze skupiny)
-    # Třídící klíč MS: 1. Pozice ve skupině, 2. Body, 3. Rozdíl skóre, 4. Vstřelené góly
+    # 4. SEMIFINÁLE
     def reseeding_key(t):
         s = global_seed_stats[t]
-        return (-s["Pos"], s["B"], s["D"], s["GF"]) # -Pos protože chceme menší číslo (1. místo) brát jako nejlepší
+        return (-s["Pos"], s["B"], s["D"], s["GF"]) 
     
     sf_seeded = sorted(qf_winners, key=reseeding_key, reverse=True)
     while len(sf_seeded) < 4: sf_seeded.append("TBD")
     
     sf_pairs = [(sf_seeded[0], sf_seeded[3]), (sf_seeded[1], sf_seeded[2])]
+    sf_labels = ["SF1 (14:30, Curych)", "SF2 (18:30, Curych)"]
     sf_w, sf_l = [], []
     for i, (a, b) in enumerate(sf_pairs):
         s1, s2, rt = sim_match(a, b, seed * 1000 + 200 + i, powers, db, "PO")
         w, l = (a, b) if s1 > s2 else (b, a)
         sf_w.append(w); sf_l.append(l)
-        matches.append({"d": "SF Den", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": f"SF{i+1}", "w": w})
+        matches.append({"d": "Sobota 30. května (SF)", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": sf_labels[i], "w": w})
 
-    # MEDAILE
+    # 5. MEDAILE
     if len(sf_l) >= 2:
         s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed * 1000 + 300, powers, db, "PO")
-        matches.append({"d": "Finálový víkend", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "BRONZ", "w": sf_l[0] if s1>s2 else sf_l[1]})
+        matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "O 3. místo (15:30, Curych)", "w": sf_l[0] if s1>s2 else sf_l[1]})
     
     if len(sf_w) >= 2:
         s1, s2, rt = sim_match(sf_w[0], sf_w[1], seed * 1000 + 400, powers, db, "PO")
-        matches.append({"d": "Finálový víkend", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "FINÁLE", "w": sf_w[0] if s1>s2 else sf_w[1]})
+        matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "Finále (20:15, Curych)", "w": sf_w[0] if s1>s2 else sf_w[1]})
     
     return matches
 
@@ -178,7 +219,6 @@ def get_mc_stats(n_sims, powers, db, version):
     for i in range(1, n_sims + 1):
         tourney = run_tourney_cached(i, powers, db, version)
         try:
-            # Zápis čtvrtfinalistů
             qf_matches = [m for m in tourney if "ČF" in m.get("lbl", "")]
             for m in qf_matches:
                 res_stats[m["t1"]]["QF"] += 1
@@ -192,7 +232,7 @@ def get_mc_stats(n_sims, powers, db, version):
         except: pass
     
     df = pd.DataFrame.from_dict(res_stats, orient='index')
-    df["🛡️ Čtvrtfinále"] = (df["QF"] / n_sims * 100)
+    df["🛡️ Postup do ČF"] = (df["QF"] / n_sims * 100)
     df["🥇 Zlato"] = (df["Gold"] / n_sims * 100); df["🥈 Stříbro"] = (df["Silver"] / n_sims * 100)
     df["🥉 Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("🥇 Zlato", ascending=False), res_stats
@@ -203,7 +243,7 @@ tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zá
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list + ["ČF Den", "SF Den", "Finálový víkend"], value="Finálový víkend")
+    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Pátek 15. května")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     
     today = [m for m in all_m if m["d"] == sel_date]
@@ -215,17 +255,17 @@ with tab1:
                 st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>", unsafe_allow_html=True)
     st.markdown("---")
     
-    # Kreslení tabulek pro fázi Skupin
-    if "Den" in sel_date and "ČF" not in sel_date and "SF" not in sel_date:
+    if "května" in sel_date and "ČF" not in sel_date and "SF" not in sel_date and "Medaile" not in sel_date:
         cols_g = st.columns(2)
         for i, gn in enumerate(["A", "B"]):
-            g_m = [m for m in all_m if m["stg"] == f"G{gn}"]
+            current_date_idx = dates_list.index(sel_date)
+            past_dates = dates_list[:current_date_idx + 1]
+            g_m = [m for m in all_m if m["stg"] == f"G{gn}" and m["d"] in past_dates]
             sorted_tms, stats = get_iihf_rankings(groups_def[gn], g_m)
             df_g = pd.DataFrame([{"Tým": t, "Body": stats[t]["B"], "Skóre": f"{stats[t]['GF']}:{stats[t]['GA']}"} for t in sorted_tms])
             df_g.index += 1
             with cols_g[i]: st.write(f"**Skupina {gn}**"); st.table(df_g)
     else:
-        # Pavouk pro Play-off
         c_qf, c_sf, c_fin = st.columns(3); po = [m for m in all_m if m["stg"]=="PO"]
         with c_qf:
             st.write("**Čtvrtfinále**")
@@ -237,7 +277,8 @@ with tab1:
                 lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
         with c_fin:
             st.write("**Medaile**")
-            for m in [x for x in po if x["lbl"] in ["BRONZ", "FINÁLE"]]:
+            # Změněno filtrování, aby se správně vybraly zápasy o medaile podle nových názvů
+            for m in [x for x in po if "místo" in x["lbl"] or "Finále" in x["lbl"]]:
                 lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'><b>{m['lbl']}</b><br>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
 
 with tab2:
@@ -245,8 +286,7 @@ with tab2:
     mc_df, _ = get_mc_stats(10000, team_powers_db, results_db, APP_VERSION)
     from matplotlib.colors import LinearSegmentedColormap
     custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
-    # Přidán sloupec šance na postup ze skupiny (Čtvrtfinále)
-    st.dataframe(mc_df[["🛡️ Čtvrtfinále", "🥇 Zlato", "🥈 Stříbro", "🥉 Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=600)
+    st.dataframe(mc_df[["🛡️ Postup do ČF", "🥇 Zlato", "🥈 Stříbro", "🥉 Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=600)
 
 with tab3:
     st.header("🔍 Hledač zázraků")
