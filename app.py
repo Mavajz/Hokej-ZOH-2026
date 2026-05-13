@@ -10,11 +10,11 @@ APP_VERSION = "5.2-MS-FULL-SCHEDULE"
 # --- 2. DATA (Týmy a orientační Power Ranking) ---
 team_powers_db = {
     # Skupina A
-    "USA": 97, "Finsko": 92, "Švýcarsko": 88, "Německo": 84, 
-    "Lotyšsko": 66, "Rakousko": 55, "Velká Británie": 30, "Maďarsko": 25,
+    "USA": 90, "Finsko": 92, "Švýcarsko": 93, "Německo": 78, 
+    "Lotyšsko": 68, "Rakousko": 56, "Velká Británie": 38, "Maďarsko": 28,
     # Skupina B
-    "Kanada": 99, "Švédsko": 91, "Česko": 85, "Slovensko": 85, 
-    "Dánsko": 62, "Norsko": 58, "Slovinsko": 45, "Itálie": 35
+    "Kanada": 99, "Švédsko": 91, "Česko": 85, "Slovensko": 76, 
+    "Dánsko": 66, "Norsko": 56, "Slovinsko": 38, "Itálie": 44
 }
 
 groups_def = {
