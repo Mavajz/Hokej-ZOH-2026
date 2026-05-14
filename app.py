@@ -4,17 +4,30 @@ import numpy as np
 import random
 
 # --- 1. KONFIGURACE ---
-st.set_page_config(page_title="MS 2026 Simulator", layout="wide", page_icon="🏒")
-APP_VERSION = "5.2-MS-FULL-SCHEDULE"
+st.set_page_config(page_title="MS 2026 Simulator | Advanced Analytics", layout="wide", page_icon="🏒")
+APP_VERSION = "6.0-OFF-DEF-MODEL"
 
-# --- 2. DATA (Týmy a orientační Power Ranking) ---
+# --- 2. DATA (Advanced Power Ranking: Útok a Obrana) ---
 team_powers_db = {
     # Skupina A
-    "USA": 90, "Finsko": 92, "Švýcarsko": 93, "Německo": 78, 
-    "Lotyšsko": 68, "Rakousko": 56, "Velká Británie": 38, "Maďarsko": 28,
+    "USA": {"OFF": 93, "DEF": 88},
+    "Finsko": {"OFF": 85, "DEF": 96},       # Finská defenzivní past
+    "Švýcarsko": {"OFF": 88, "DEF": 89},
+    "Německo": {"OFF": 83, "DEF": 82},
+    "Lotyšsko": {"OFF": 68, "DEF": 78},     # Bojovníci s dobrou obranou
+    "Rakousko": {"OFF": 60, "DEF": 60},
+    "Velká Británie": {"OFF": 45, "DEF": 40},
+    "Maďarsko": {"OFF": 40, "DEF": 35},
+    
     # Skupina B
-    "Kanada": 99, "Švédsko": 91, "Česko": 85, "Slovensko": 76, 
-    "Dánsko": 66, "Norsko": 56, "Slovinsko": 38, "Itálie": 44
+    "Kanada": {"OFF": 95, "DEF": 90},
+    "Švédsko": {"OFF": 89, "DEF": 92},
+    "Česko": {"OFF": 86, "DEF": 85},
+    "Slovensko": {"OFF": 85, "DEF": 81},
+    "Dánsko": {"OFF": 66, "DEF": 72},
+    "Norsko": {"OFF": 62, "DEF": 65},
+    "Slovinsko": {"OFF": 55, "DEF": 55},
+    "Itálie": {"OFF": 50, "DEF": 58}        # Betonáři
 }
 
 groups_def = {
@@ -55,21 +68,30 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. LOGIKA ---
+# --- 4. LOGIKA ADVANCED ANALYTICS ---
 def sim_match(t1, t2, match_seed, powers, db, stage):
     if (t1, t2, stage) in db: return db[(t1, t2, stage)]
     if (t2, t1, stage) in db: r = db[(t2, t1, stage)]; return (r[1], r[0], r[2])
     
     curr_rng = np.random.RandomState(match_seed)
-    p1, p2 = powers[t1], powers[t2]
-    avg = 2.7
-    s1 = curr_rng.poisson(avg * (p1 / p2)**1.15)
-    s2 = curr_rng.poisson(avg * (p2 / p1)**1.15)
+    off1, def1 = powers[t1]["OFF"], powers[t1]["DEF"]
+    off2, def2 = powers[t2]["OFF"], powers[t2]["DEF"]
+    
+    # Dynamický průměr gólů - v play-off se hraje opatrněji
+    base_avg = 2.8 if stage.startswith("G") else 2.3
+    
+    # Křížový výpočet: Útok Týmu 1 vs Obrana Týmu 2
+    l1 = base_avg * (off1 / def2)**1.4
+    l2 = base_avg * (off2 / def1)**1.4
+    
+    s1 = curr_rng.poisson(l1)
+    s2 = curr_rng.poisson(l2)
     
     rtype = "REG"
     if s1 == s2:
-        rtype = "PP" if curr_rng.rand() < 0.5 else "SN"
-        if curr_rng.rand() < (p1/(p1+p2)): s1 += 1
+        # 65 % šance na prodloužení, 35 % nájezdy
+        rtype = "PP" if curr_rng.rand() < 0.65 else "SN"
+        if curr_rng.rand() < (l1 / (l1 + l2)): s1 += 1
         else: s2 += 1
     return s1, s2, rtype
 
@@ -114,7 +136,6 @@ def get_iihf_rankings(group_teams, group_matches):
 def run_tourney_cached(seed, powers, db, version):
     matches = []
     
-    # 1. GENERACE SKUPINOVÉ FÁZE
     sched = [
         # 15. května
         ("Pátek 15. května", "Finsko", "Německo", "A"), ("Pátek 15. května", "Švédsko", "Kanada", "B"),
@@ -159,10 +180,9 @@ def run_tourney_cached(seed, powers, db, version):
     ]
 
     for i, (d, t1, t2, gn) in enumerate(sched):
-        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, "G")
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}")
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
 
-    # 2. TABULKY A POSTUPUJÍCÍ
     group_rankings = {"A": [], "B": []}
     global_seed_stats = {} 
     
@@ -173,7 +193,6 @@ def run_tourney_cached(seed, powers, db, version):
         for i, t in enumerate(sorted_tms):
             global_seed_stats[t] = {"Pos": i+1, "B": stats[t]["B"], "D": stats[t]["GF"]-stats[t]["GA"], "GF": stats[t]["GF"]}
 
-    # 3. ČTVRTFINÁLE
     A = group_rankings["A"]
     B = group_rankings["B"]
     qf_pairs = [(A[0], B[3]), (B[0], A[3]), (A[1], B[2]), (B[1], A[2])]
@@ -185,7 +204,6 @@ def run_tourney_cached(seed, powers, db, version):
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
         matches.append({"d": "Čtvrtek 28. května (ČF)", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": qf_labels[i], "w": w})
 
-    # 4. SEMIFINÁLE
     def reseeding_key(t):
         s = global_seed_stats[t]
         return (-s["Pos"], s["B"], s["D"], s["GF"]) 
@@ -202,7 +220,6 @@ def run_tourney_cached(seed, powers, db, version):
         sf_w.append(w); sf_l.append(l)
         matches.append({"d": "Sobota 30. května (SF)", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": sf_labels[i], "w": w})
 
-    # 5. MEDAILE
     if len(sf_l) >= 2:
         s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed * 1000 + 300, powers, db, "PO")
         matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "O 3. místo (15:30, Curych)", "w": sf_l[0] if s1>s2 else sf_l[1]})
@@ -277,7 +294,6 @@ with tab1:
                 lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
         with c_fin:
             st.write("**Medaile**")
-            # Změněno filtrování, aby se správně vybraly zápasy o medaile podle nových názvů
             for m in [x for x in po if "místo" in x["lbl"] or "Finále" in x["lbl"]]:
                 lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'><b>{m['lbl']}</b><br>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
 
@@ -298,3 +314,4 @@ with tab3:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
+        
