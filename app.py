@@ -4,30 +4,30 @@ import numpy as np
 import random
 
 # --- 1. KONFIGURACE ---
-st.set_page_config(page_title="MS 2026 Simulator | Advanced Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "6.0-OFF-DEF-MODEL"
+st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
+APP_VERSION = "7.0-PRO-ANALYTICS"
 
-# --- 2. DATA (Advanced Power Ranking: Útok a Obrana) ---
+# --- 2. DATA (Útok, Obrana a nový atribut SKILL pro 3v3/Nájezdy) ---
 team_powers_db = {
-    # Skupina A (Již zkalibrováno)
-    "USA": {"OFF": 95, "DEF": 90},            
-    "Finsko": {"OFF": 91, "DEF": 95},         
-    "Švýcarsko": {"OFF": 94, "DEF": 93},      
-    "Německo": {"OFF": 82, "DEF": 89},        
-    "Lotyšsko": {"OFF": 69, "DEF": 76},       
-    "Rakousko": {"OFF": 58, "DEF": 60},       
-    "Velká Británie": {"OFF": 45, "DEF": 45}, 
-    "Maďarsko": {"OFF": 38, "DEF": 35},       
+    # Skupina A
+    "USA": {"OFF": 95, "DEF": 90, "SKILL": 96},            
+    "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         
+    "Švýcarsko": {"OFF": 94, "DEF": 93, "SKILL": 92},      
+    "Německo": {"OFF": 82, "DEF": 89, "SKILL": 84},        
+    "Lotyšsko": {"OFF": 69, "DEF": 76, "SKILL": 70},       
+    "Rakousko": {"OFF": 58, "DEF": 60, "SKILL": 60},       
+    "Velká Británie": {"OFF": 45, "DEF": 45, "SKILL": 40}, 
+    "Maďarsko": {"OFF": 38, "DEF": 35, "SKILL": 35},       
     
-    # Skupina B (Nově zkalibrováno podle soupisek!)
-    "Kanada": {"OFF": 99, "DEF": 88},         # Drtivý útok, lehce zranitelná v bráně
-    "Švédsko": {"OFF": 89, "DEF": 93},        # Skvělá defenziva
-    "Česko": {"OFF": 88, "DEF": 84},          # Útok posílen díky hvězdám (Pastrňák, Červenka)
-    "Slovensko": {"OFF": 86, "DEF": 85},      # Velmi vyrovnaný tým s mladými hvězdami
-    "Dánsko": {"OFF": 66, "DEF": 70},         
-    "Norsko": {"OFF": 64, "DEF": 62},         
-    "Slovinsko": {"OFF": 55, "DEF": 50},      
-    "Itálie": {"OFF": 48, "DEF": 58}          # Defenzivní zaměření
+    # Skupina B
+    "Kanada": {"OFF": 99, "DEF": 88, "SKILL": 99},         
+    "Švédsko": {"OFF": 89, "DEF": 93, "SKILL": 90},        
+    "Česko": {"OFF": 88, "DEF": 84, "SKILL": 94}, # Pastrňák/Nečas boost pro prodloužení!
+    "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      
+    "Dánsko": {"OFF": 66, "DEF": 70, "SKILL": 65},         
+    "Norsko": {"OFF": 64, "DEF": 62, "SKILL": 60},         
+    "Slovinsko": {"OFF": 55, "DEF": 50, "SKILL": 50},      
+    "Itálie": {"OFF": 48, "DEF": 58, "SKILL": 45}          
 }
 
 groups_def = {
@@ -35,15 +35,18 @@ groups_def = {
     "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-# Zde budeme postupně zapisovat reálné výsledky
 results_db = {}
 
-dates_list = [
-    "Pátek 15. května", "Sobota 16. května", "Neděle 17. května", "Pondělí 18. května",
-    "Úterý 19. května", "Středa 20. května", "Čtvrtek 21. května", "Pátek 22. května",
-    "Sobota 23. května", "Neděle 24. května", "Pondělí 25. května", "Úterý 26. května",
-    "Čtvrtek 28. května (ČF)", "Sobota 30. května (SF)", "Neděle 31. května (Medaile)"
-]
+# Mapování datumů na "číslo dne" pro výpočet únavy (Back-to-back zápasy)
+date_mapping = {
+    "Pátek 15. května": 1, "Sobota 16. května": 2, "Neděle 17. května": 3,
+    "Pondělí 18. května": 4, "Úterý 19. května": 5, "Středa 20. května": 6,
+    "Čtvrtek 21. května": 7, "Pátek 22. května": 8, "Sobota 23. května": 9,
+    "Neděle 24. května": 10, "Pondělí 25. května": 11, "Úterý 26. května": 12,
+    "Čtvrtek 28. května (ČF)": 14, "Sobota 30. května (SF)": 16, "Neděle 31. května (Medaile)": 17
+}
+
+dates_list = list(date_mapping.keys())
 
 # --- 3. CSS DESIGN ---
 st.markdown("""
@@ -68,31 +71,55 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- 4. LOGIKA ADVANCED ANALYTICS ---
-def sim_match(t1, t2, match_seed, powers, db, stage):
+# --- 4. LOGIKA PRO ANALYTICS ---
+def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_dict):
     if (t1, t2, stage) in db: return db[(t1, t2, stage)]
     if (t2, t1, stage) in db: r = db[(t2, t1, stage)]; return (r[1], r[0], r[2])
     
     curr_rng = np.random.RandomState(match_seed)
-    off1, def1 = powers[t1]["OFF"], powers[t1]["DEF"]
-    off2, def2 = powers[t2]["OFF"], powers[t2]["DEF"]
+    off1, def1, skill1 = powers[t1]["OFF"], powers[t1]["DEF"], powers[t1]["SKILL"]
+    off2, def2, skill2 = powers[t2]["OFF"], powers[t2]["DEF"], powers[t2]["SKILL"]
     
-    # Dynamický průměr gólů - v play-off se hraje opatrněji
+    # 1. DOMÁCÍ PROSTŘEDÍ (Švýcarsko)
+    if t1 == "Švýcarsko": off1 *= 1.05; def1 *= 1.05
+    if t2 == "Švýcarsko": off2 *= 1.05; def2 *= 1.05
+        
+    # 2. ÚNAVA (Back-to-back zápasy)
+    rest1 = current_day - last_played_dict.get(t1, -99)
+    rest2 = current_day - last_played_dict.get(t2, -99)
+    
+    if rest1 == 1 and rest2 > 1:
+        off1 *= 0.95; def1 *= 0.95 # T1 hrál včera, T2 ne -> T1 je unavený
+    elif rest2 == 1 and rest1 > 1:
+        off2 *= 0.95; def2 *= 0.95 # T2 hrál včera, T1 ne -> T2 je unavený
+
+    # Výpočet základních gólů
     base_avg = 2.8 if stage.startswith("G") else 2.3
-    
-    # Křížový výpočet: Útok Týmu 1 vs Obrana Týmu 2
     l1 = base_avg * (off1 / def2)**1.4
     l2 = base_avg * (off2 / def1)**1.4
     
     s1 = curr_rng.poisson(l1)
     s2 = curr_rng.poisson(l2)
     
+    # 3. DRAMA V ZÁVĚRU (Empty Net / Pozdní vyrovnání)
+    if s1 == s2 + 1:
+        roll = curr_rng.rand()
+        if roll < 0.25: s1 += 1      # 25% šance na gól do prázdné (T1)
+        elif roll < 0.35: s2 += 1    # 10% šance na vyrovnání při hře bez brankáře (T2)
+    elif s2 == s1 + 1:
+        roll = curr_rng.rand()
+        if roll < 0.25: s2 += 1      # 25% šance na gól do prázdné (T2)
+        elif roll < 0.35: s1 += 1    # 10% šance na vyrovnání při hře bez brankáře (T1)
+
+    # 4. PRODLOUŽENÍ & NÁJEZDY (Skill-Based)
     rtype = "REG"
     if s1 == s2:
-        # 65 % šance na prodloužení, 35 % nájezdy
         rtype = "PP" if curr_rng.rand() < 0.65 else "SN"
-        if curr_rng.rand() < (l1 / (l1 + l2)): s1 += 1
-        else: s2 += 1
+        if curr_rng.rand() < (skill1 / (skill1 + skill2)): 
+            s1 += 1
+        else: 
+            s2 += 1
+            
     return s1, s2, rtype
 
 def get_iihf_rankings(group_teams, group_matches):
@@ -135,53 +162,46 @@ def get_iihf_rankings(group_teams, group_matches):
 @st.cache_data
 def run_tourney_cached(seed, powers, db, version):
     matches = []
+    last_played = {} # Sledování únavy
     
     sched = [
-        # 15. května
         ("Pátek 15. května", "Finsko", "Německo", "A"), ("Pátek 15. května", "Švédsko", "Kanada", "B"),
         ("Pátek 15. května", "Švýcarsko", "USA", "A"), ("Pátek 15. května", "Dánsko", "Česko", "B"),
-        # 16. května
         ("Sobota 16. května", "Rakousko", "Velká Británie", "A"), ("Sobota 16. května", "Slovensko", "Norsko", "B"),
         ("Sobota 16. května", "Finsko", "Maďarsko", "A"), ("Sobota 16. května", "Kanada", "Itálie", "B"),
         ("Sobota 16. května", "Švýcarsko", "Lotyšsko", "A"), ("Sobota 16. května", "Slovinsko", "Česko", "B"),
-        # 17. května
         ("Neděle 17. května", "USA", "Velká Británie", "A"), ("Neděle 17. května", "Itálie", "Slovensko", "B"),
         ("Neděle 17. května", "Rakousko", "Maďarsko", "A"), ("Neděle 17. května", "Švédsko", "Dánsko", "B"),
         ("Neděle 17. května", "Německo", "Lotyšsko", "A"), ("Neděle 17. května", "Norsko", "Slovinsko", "B"),
-        # 18. května
         ("Pondělí 18. května", "Finsko", "USA", "A"), ("Pondělí 18. května", "Kanada", "Dánsko", "B"),
         ("Pondělí 18. května", "Švýcarsko", "Německo", "A"), ("Pondělí 18. května", "Česko", "Švédsko", "B"),
-        # 19. května
         ("Úterý 19. května", "Lotyšsko", "Rakousko", "A"), ("Úterý 19. května", "Itálie", "Norsko", "B"),
         ("Úterý 19. května", "Maďarsko", "Velká Británie", "A"), ("Úterý 19. května", "Slovinsko", "Slovensko", "B"),
-        # 20. května
         ("Středa 20. května", "Švýcarsko", "Rakousko", "A"), ("Středa 20. května", "Česko", "Itálie", "B"),
         ("Středa 20. května", "USA", "Německo", "A"), ("Středa 20. května", "Švédsko", "Slovinsko", "B"),
-        # 21. května
         ("Čtvrtek 21. května", "Finsko", "Lotyšsko", "A"), ("Čtvrtek 21. května", "Norsko", "Kanada", "B"),
         ("Čtvrtek 21. května", "Švýcarsko", "Velká Británie", "A"), ("Čtvrtek 21. května", "Dánsko", "Slovensko", "B"),
-        # 22. května
         ("Pátek 22. května", "Maďarsko", "Německo", "A"), ("Pátek 22. května", "Kanada", "Slovinsko", "B"),
         ("Pátek 22. května", "Finsko", "Velká Británie", "A"), ("Pátek 22. května", "Itálie", "Švédsko", "B"),
-        # 23. května
         ("Sobota 23. května", "USA", "Lotyšsko", "A"), ("Sobota 23. května", "Dánsko", "Slovinsko", "B"),
         ("Sobota 23. května", "Švýcarsko", "Maďarsko", "A"), ("Sobota 23. května", "Slovensko", "Česko", "B"),
         ("Sobota 23. května", "Německo", "Rakousko", "A"), ("Sobota 23. května", "Švédsko", "Norsko", "B"),
-        # 24. května
         ("Neděle 24. května", "Lotyšsko", "Velká Británie", "A"), ("Neděle 24. května", "Dánsko", "Itálie", "B"),
         ("Neděle 24. května", "Finsko", "Rakousko", "A"), ("Neděle 24. května", "Kanada", "Slovensko", "B"),
-        # 25. května
         ("Pondělí 25. května", "USA", "Maďarsko", "A"), ("Pondělí 25. května", "Česko", "Norsko", "B"),
         ("Pondělí 25. května", "Německo", "Velká Británie", "A"), ("Pondělí 25. května", "Slovinsko", "Itálie", "B"),
-        # 26. května
         ("Úterý 26. května", "Maďarsko", "Lotyšsko", "A"), ("Úterý 26. května", "Norsko", "Dánsko", "B"),
         ("Úterý 26. května", "USA", "Rakousko", "A"), ("Úterý 26. května", "Slovensko", "Švédsko", "B"),
         ("Úterý 26. května", "Švýcarsko", "Finsko", "A"), ("Úterý 26. května", "Česko", "Kanada", "B"),
     ]
 
     for i, (d, t1, t2, gn) in enumerate(sched):
-        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}")
+        day_num = date_mapping[d]
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}", day_num, last_played)
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
+        # Aktualizace únavy
+        last_played[t1] = day_num
+        last_played[t2] = day_num
 
     group_rankings = {"A": [], "B": []}
     global_seed_stats = {} 
@@ -199,10 +219,12 @@ def run_tourney_cached(seed, powers, db, version):
     qf_labels = ["ČF1 (16:15, Curych)", "ČF2 (16:15, Fribourg)", "ČF3 (20:15, Curych)", "ČF4 (20:15, Fribourg)"]
     qf_winners = []
     
+    cf_day = date_mapping["Čtvrtek 28. května (ČF)"]
     for i, (t1, t2) in enumerate(qf_pairs):
-        s1, s2, rt = sim_match(t1, t2, seed * 1000 + 100 + i, powers, db, "PO")
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + 100 + i, powers, db, "PO", cf_day, last_played)
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
         matches.append({"d": "Čtvrtek 28. května (ČF)", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": qf_labels[i], "w": w})
+        last_played[t1] = cf_day; last_played[t2] = cf_day
 
     def reseeding_key(t):
         s = global_seed_stats[t]
@@ -214,18 +236,21 @@ def run_tourney_cached(seed, powers, db, version):
     sf_pairs = [(sf_seeded[0], sf_seeded[3]), (sf_seeded[1], sf_seeded[2])]
     sf_labels = ["SF1 (14:30, Curych)", "SF2 (18:30, Curych)"]
     sf_w, sf_l = [], []
+    sf_day = date_mapping["Sobota 30. května (SF)"]
     for i, (a, b) in enumerate(sf_pairs):
-        s1, s2, rt = sim_match(a, b, seed * 1000 + 200 + i, powers, db, "PO")
+        s1, s2, rt = sim_match(a, b, seed * 1000 + 200 + i, powers, db, "PO", sf_day, last_played)
         w, l = (a, b) if s1 > s2 else (b, a)
         sf_w.append(w); sf_l.append(l)
         matches.append({"d": "Sobota 30. května (SF)", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": sf_labels[i], "w": w})
+        last_played[a] = sf_day; last_played[b] = sf_day
 
+    med_day = date_mapping["Neděle 31. května (Medaile)"]
     if len(sf_l) >= 2:
-        s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed * 1000 + 300, powers, db, "PO")
+        s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed * 1000 + 300, powers, db, "PO", med_day, last_played)
         matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "O 3. místo (15:30, Curych)", "w": sf_l[0] if s1>s2 else sf_l[1]})
     
     if len(sf_w) >= 2:
-        s1, s2, rt = sim_match(sf_w[0], sf_w[1], seed * 1000 + 400, powers, db, "PO")
+        s1, s2, rt = sim_match(sf_w[0], sf_w[1], seed * 1000 + 400, powers, db, "PO", med_day, last_played)
         matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "Finále (20:15, Curych)", "w": sf_w[0] if s1>s2 else sf_w[1]})
     
     return matches
@@ -314,4 +339,4 @@ with tab3:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
-        
+    
