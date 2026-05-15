@@ -9,25 +9,25 @@ APP_VERSION = "6.0-OFF-DEF-MODEL"
 
 # --- 2. DATA (Advanced Power Ranking: Útok a Obrana) ---
 team_powers_db = {
-    # Skupina A
-    "USA": {"OFF": 93, "DEF": 88},
-    "Finsko": {"OFF": 85, "DEF": 96},       # Finská defenzivní past
-    "Švýcarsko": {"OFF": 88, "DEF": 89},
-    "Německo": {"OFF": 83, "DEF": 82},
-    "Lotyšsko": {"OFF": 68, "DEF": 78},     # Bojovníci s dobrou obranou
-    "Rakousko": {"OFF": 60, "DEF": 60},
-    "Velká Británie": {"OFF": 45, "DEF": 40},
-    "Maďarsko": {"OFF": 40, "DEF": 35},
+    # Skupina A (Již zkalibrováno)
+    "USA": {"OFF": 95, "DEF": 90},            
+    "Finsko": {"OFF": 91, "DEF": 95},         
+    "Švýcarsko": {"OFF": 94, "DEF": 93},      
+    "Německo": {"OFF": 82, "DEF": 89},        
+    "Lotyšsko": {"OFF": 69, "DEF": 76},       
+    "Rakousko": {"OFF": 58, "DEF": 60},       
+    "Velká Británie": {"OFF": 45, "DEF": 45}, 
+    "Maďarsko": {"OFF": 38, "DEF": 35},       
     
-    # Skupina B
-    "Kanada": {"OFF": 95, "DEF": 90},
-    "Švédsko": {"OFF": 89, "DEF": 92},
-    "Česko": {"OFF": 86, "DEF": 85},
-    "Slovensko": {"OFF": 85, "DEF": 81},
-    "Dánsko": {"OFF": 66, "DEF": 72},
-    "Norsko": {"OFF": 62, "DEF": 65},
-    "Slovinsko": {"OFF": 55, "DEF": 55},
-    "Itálie": {"OFF": 50, "DEF": 58}        # Betonáři
+    # Skupina B (Nově zkalibrováno podle soupisek!)
+    "Kanada": {"OFF": 99, "DEF": 88},         # Drtivý útok, lehce zranitelná v bráně
+    "Švédsko": {"OFF": 89, "DEF": 93},        # Skvělá defenziva
+    "Česko": {"OFF": 88, "DEF": 84},          # Útok posílen díky hvězdám (Pastrňák, Červenka)
+    "Slovensko": {"OFF": 86, "DEF": 85},      # Velmi vyrovnaný tým s mladými hvězdami
+    "Dánsko": {"OFF": 66, "DEF": 70},         
+    "Norsko": {"OFF": 64, "DEF": 62},         
+    "Slovinsko": {"OFF": 55, "DEF": 50},      
+    "Itálie": {"OFF": 48, "DEF": 58}          # Defenzivní zaměření
 }
 
 groups_def = {
