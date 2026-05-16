@@ -5,26 +5,26 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "7.0-PRO-ANALYTICS"
+APP_VERSION = "8.0-DAY1-LIVE"
 
-# --- 2. DATA (Útok, Obrana a nový atribut SKILL pro 3v3/Nájezdy) ---
+# --- 2. DATA (Aktualizováno po 1. hracím dni!) ---
 team_powers_db = {
     # Skupina A
-    "USA": {"OFF": 95, "DEF": 90, "SKILL": 96},            
-    "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         
-    "Švýcarsko": {"OFF": 94, "DEF": 93, "SKILL": 92},      
-    "Německo": {"OFF": 82, "DEF": 89, "SKILL": 84},        
+    "USA": {"OFF": 92, "DEF": 89, "SKILL": 96},            # Trápení v koncovce proti SUI
+    "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         # Defenzivní jistota
+    "Švýcarsko": {"OFF": 95, "DEF": 94, "SKILL": 92},      # Famózní výkon, obrovský favorit
+    "Německo": {"OFF": 81, "DEF": 89, "SKILL": 84},        # Málo střel proti FIN
     "Lotyšsko": {"OFF": 69, "DEF": 76, "SKILL": 70},       
     "Rakousko": {"OFF": 58, "DEF": 60, "SKILL": 60},       
     "Velká Británie": {"OFF": 45, "DEF": 45, "SKILL": 40}, 
     "Maďarsko": {"OFF": 38, "DEF": 35, "SKILL": 35},       
     
     # Skupina B
-    "Kanada": {"OFF": 99, "DEF": 88, "SKILL": 99},         
-    "Švédsko": {"OFF": 89, "DEF": 93, "SKILL": 90},        
-    "Česko": {"OFF": 88, "DEF": 84, "SKILL": 94}, # Pastrňák/Nečas boost pro prodloužení!
+    "Kanada": {"OFF": 99, "DEF": 87, "SKILL": 99},         # Smrtící útok, ale slabší brankář
+    "Švédsko": {"OFF": 90, "DEF": 91, "SKILL": 90},        # Obrana trochu hořela, ale útok fungoval
+    "Česko": {"OFF": 88, "DEF": 86, "SKILL": 94},          # Skvělý výkon vzadu proti Dánsku
     "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      
-    "Dánsko": {"OFF": 66, "DEF": 70, "SKILL": 65},         
+    "Dánsko": {"OFF": 65, "DEF": 69, "SKILL": 65},         
     "Norsko": {"OFF": 64, "DEF": 62, "SKILL": 60},         
     "Slovinsko": {"OFF": 55, "DEF": 50, "SKILL": 50},      
     "Itálie": {"OFF": 48, "DEF": 58, "SKILL": 45}          
@@ -35,7 +35,13 @@ groups_def = {
     "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-results_db = {}
+# REÁLNÉ VÝSLEDKY - Zapsán 1. den
+results_db = {
+    ("Finsko", "Německo", "GA"): (3, 1, "REG"),
+    ("Švédsko", "Kanada", "GB"): (3, 5, "REG"),
+    ("Švýcarsko", "USA", "GA"): (3, 1, "REG"),
+    ("Dánsko", "Česko", "GB"): (1, 4, "REG"),
+}
 
 # Mapování datumů na "číslo dne" pro výpočet únavy (Back-to-back zápasy)
 date_mapping = {
@@ -285,7 +291,7 @@ tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zá
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Pátek 15. května")
+    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Sobota 16. května")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     
     today = [m for m in all_m if m["d"] == sel_date]
@@ -339,4 +345,4 @@ with tab3:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
-    
+        
