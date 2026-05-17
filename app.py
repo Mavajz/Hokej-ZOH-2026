@@ -5,29 +5,29 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "8.0-DAY1-LIVE"
+APP_VERSION = "8.1-DAY2-SHOCK"
 
-# --- 2. DATA (Aktualizováno po 1. hracím dni!) ---
+# --- 2. DATA (Aktualizováno po šokujícím 2. hracím dni!) ---
 team_powers_db = {
     # Skupina A
-    "USA": {"OFF": 92, "DEF": 89, "SKILL": 96},            # Trápení v koncovce proti SUI
-    "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         # Defenzivní jistota
-    "Švýcarsko": {"OFF": 95, "DEF": 94, "SKILL": 92},      # Famózní výkon, obrovský favorit
-    "Německo": {"OFF": 81, "DEF": 89, "SKILL": 84},        # Málo střel proti FIN
+    "USA": {"OFF": 92, "DEF": 89, "SKILL": 96},            
+    "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         
+    "Švýcarsko": {"OFF": 96, "DEF": 94, "SKILL": 92},      # Drtivých 43 střel, ofenziva letí nahoru
+    "Německo": {"OFF": 81, "DEF": 89, "SKILL": 84},        
     "Lotyšsko": {"OFF": 69, "DEF": 76, "SKILL": 70},       
-    "Rakousko": {"OFF": 58, "DEF": 60, "SKILL": 60},       
-    "Velká Británie": {"OFF": 45, "DEF": 45, "SKILL": 40}, 
-    "Maďarsko": {"OFF": 38, "DEF": 35, "SKILL": 35},       
+    "Rakousko": {"OFF": 60, "DEF": 61, "SKILL": 60},       # Přesvědčivá výhra nad GB
+    "Velká Británie": {"OFF": 44, "DEF": 44, "SKILL": 40}, 
+    "Maďarsko": {"OFF": 39, "DEF": 35, "SKILL": 35},       
     
     # Skupina B
-    "Kanada": {"OFF": 99, "DEF": 87, "SKILL": 99},         # Smrtící útok, ale slabší brankář
-    "Švédsko": {"OFF": 90, "DEF": 91, "SKILL": 90},        # Obrana trochu hořela, ale útok fungoval
-    "Česko": {"OFF": 88, "DEF": 86, "SKILL": 94},          # Skvělý výkon vzadu proti Dánsku
-    "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      
+    "Kanada": {"OFF": 99, "DEF": 89, "SKILL": 99},         # Čisté konto proti Itálii
+    "Švédsko": {"OFF": 90, "DEF": 91, "SKILL": 90},        
+    "Česko": {"OFF": 87, "DEF": 82, "SKILL": 94},          # Brutální propad v defenzivě/brankovišti po zápase se SLO
+    "Slovensko": {"OFF": 85, "DEF": 85, "SKILL": 88},      # Trápení v útoku (jen 19 střel), zachránil to gólman
     "Dánsko": {"OFF": 65, "DEF": 69, "SKILL": 65},         
-    "Norsko": {"OFF": 64, "DEF": 62, "SKILL": 60},         
-    "Slovinsko": {"OFF": 55, "DEF": 50, "SKILL": 50},      
-    "Itálie": {"OFF": 48, "DEF": 58, "SKILL": 45}          
+    "Norsko": {"OFF": 65, "DEF": 64, "SKILL": 60},         # Přestříleli Slováky, hrají dobře
+    "Slovinsko": {"OFF": 58, "DEF": 56, "SKILL": 55},      # HRDINOVÉ! Obrovský boost za výhru nad CZE
+    "Itálie": {"OFF": 47, "DEF": 55, "SKILL": 45}          
 }
 
 groups_def = {
@@ -35,12 +35,20 @@ groups_def = {
     "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-# REÁLNÉ VÝSLEDKY - Zapsán 1. den
+# REÁLNÉ VÝSLEDKY - Zapsán 1. a 2. den
 results_db = {
+    # Den 1
     ("Finsko", "Německo", "GA"): (3, 1, "REG"),
     ("Švédsko", "Kanada", "GB"): (3, 5, "REG"),
     ("Švýcarsko", "USA", "GA"): (3, 1, "REG"),
     ("Dánsko", "Česko", "GB"): (1, 4, "REG"),
+    # Den 2
+    ("Rakousko", "Velká Británie", "GA"): (5, 2, "REG"),
+    ("Slovensko", "Norsko", "GB"): (2, 1, "REG"),
+    ("Finsko", "Maďarsko", "GA"): (4, 1, "REG"),
+    ("Kanada", "Itálie", "GB"): (6, 0, "REG"),
+    ("Švýcarsko", "Lotyšsko", "GA"): (4, 2, "REG"),
+    ("Slovinsko", "Česko", "GB"): (3, 2, "PP"), # Bolestivá ztráta
 }
 
 # Mapování datumů na "číslo dne" pro výpočet únavy (Back-to-back zápasy)
@@ -110,12 +118,12 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
     # 3. DRAMA V ZÁVĚRU (Empty Net / Pozdní vyrovnání)
     if s1 == s2 + 1:
         roll = curr_rng.rand()
-        if roll < 0.25: s1 += 1      # 25% šance na gól do prázdné (T1)
-        elif roll < 0.35: s2 += 1    # 10% šance na vyrovnání při hře bez brankáře (T2)
+        if roll < 0.25: s1 += 1      
+        elif roll < 0.35: s2 += 1    
     elif s2 == s1 + 1:
         roll = curr_rng.rand()
-        if roll < 0.25: s2 += 1      # 25% šance na gól do prázdné (T2)
-        elif roll < 0.35: s1 += 1    # 10% šance na vyrovnání při hře bez brankáře (T1)
+        if roll < 0.25: s2 += 1      
+        elif roll < 0.35: s1 += 1    
 
     # 4. PRODLOUŽENÍ & NÁJEZDY (Skill-Based)
     rtype = "REG"
@@ -168,7 +176,7 @@ def get_iihf_rankings(group_teams, group_matches):
 @st.cache_data
 def run_tourney_cached(seed, powers, db, version):
     matches = []
-    last_played = {} # Sledování únavy
+    last_played = {} 
     
     sched = [
         ("Pátek 15. května", "Finsko", "Německo", "A"), ("Pátek 15. května", "Švédsko", "Kanada", "B"),
@@ -205,7 +213,6 @@ def run_tourney_cached(seed, powers, db, version):
         day_num = date_mapping[d]
         s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}", day_num, last_played)
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
-        # Aktualizace únavy
         last_played[t1] = day_num
         last_played[t2] = day_num
 
@@ -345,4 +352,4 @@ with tab3:
         st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
         if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
     else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
-        
+    
