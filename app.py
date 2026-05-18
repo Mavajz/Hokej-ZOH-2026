@@ -5,28 +5,28 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "8.1-DAY2-SHOCK"
+APP_VERSION = "8.2-DAY3-LOWER-SCORING"
 
-# --- 2. DATA (Aktualizováno po šokujícím 2. hracím dni!) ---
+# --- 2. DATA (Aktualizováno po 3. hracím dni!) ---
 team_powers_db = {
     # Skupina A
-    "USA": {"OFF": 92, "DEF": 89, "SKILL": 96},            
+    "USA": {"OFF": 93, "DEF": 89, "SKILL": 96},            
     "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         
-    "Švýcarsko": {"OFF": 96, "DEF": 94, "SKILL": 92},      # Drtivých 43 střel, ofenziva letí nahoru
-    "Německo": {"OFF": 81, "DEF": 89, "SKILL": 84},        
-    "Lotyšsko": {"OFF": 69, "DEF": 76, "SKILL": 70},       
-    "Rakousko": {"OFF": 60, "DEF": 61, "SKILL": 60},       # Přesvědčivá výhra nad GB
+    "Švýcarsko": {"OFF": 96, "DEF": 94, "SKILL": 92},      
+    "Německo": {"OFF": 78, "DEF": 89, "SKILL": 84},        # Brutální ofenzivní trápení (0 gólů proti LAT)
+    "Lotyšsko": {"OFF": 69, "DEF": 80, "SKILL": 72},       # Skvělá defenziva a čisté konto
+    "Rakousko": {"OFF": 62, "DEF": 61, "SKILL": 60},       # Důležitá výhra, ofenziva šlape
     "Velká Británie": {"OFF": 44, "DEF": 44, "SKILL": 40}, 
     "Maďarsko": {"OFF": 39, "DEF": 35, "SKILL": 35},       
     
     # Skupina B
-    "Kanada": {"OFF": 99, "DEF": 89, "SKILL": 99},         # Čisté konto proti Itálii
-    "Švédsko": {"OFF": 90, "DEF": 91, "SKILL": 90},        
-    "Česko": {"OFF": 87, "DEF": 82, "SKILL": 94},          # Brutální propad v defenzivě/brankovišti po zápase se SLO
-    "Slovensko": {"OFF": 85, "DEF": 85, "SKILL": 88},      # Trápení v útoku (jen 19 střel), zachránil to gólman
-    "Dánsko": {"OFF": 65, "DEF": 69, "SKILL": 65},         
-    "Norsko": {"OFF": 65, "DEF": 64, "SKILL": 60},         # Přestříleli Slováky, hrají dobře
-    "Slovinsko": {"OFF": 58, "DEF": 56, "SKILL": 55},      # HRDINOVÉ! Obrovský boost za výhru nad CZE
+    "Kanada": {"OFF": 99, "DEF": 89, "SKILL": 99},         
+    "Švédsko": {"OFF": 92, "DEF": 91, "SKILL": 90},        # Ofenzivní exploze proti Dánsku
+    "Česko": {"OFF": 87, "DEF": 82, "SKILL": 94},          
+    "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      # Jistá výhra nad Itálií, návrat sebevědomí
+    "Dánsko": {"OFF": 65, "DEF": 67, "SKILL": 65},         # Obrana hořela proti Švédům
+    "Norsko": {"OFF": 67, "DEF": 66, "SKILL": 62},         # Dominantní výhra nad Slovinskem
+    "Slovinsko": {"OFF": 55, "DEF": 54, "SKILL": 55},      # Návrat do reality po výhře nad CZE
     "Itálie": {"OFF": 47, "DEF": 55, "SKILL": 45}          
 }
 
@@ -35,7 +35,7 @@ groups_def = {
     "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-# REÁLNÉ VÝSLEDKY - Zapsán 1. a 2. den
+# REÁLNÉ VÝSLEDKY - Zapsán 1., 2. a 3. den
 results_db = {
     # Den 1
     ("Finsko", "Německo", "GA"): (3, 1, "REG"),
@@ -48,10 +48,16 @@ results_db = {
     ("Finsko", "Maďarsko", "GA"): (4, 1, "REG"),
     ("Kanada", "Itálie", "GB"): (6, 0, "REG"),
     ("Švýcarsko", "Lotyšsko", "GA"): (4, 2, "REG"),
-    ("Slovinsko", "Česko", "GB"): (3, 2, "PP"), # Bolestivá ztráta
+    ("Slovinsko", "Česko", "GB"): (3, 2, "PP"),
+    # Den 3
+    ("USA", "Velká Británie", "GA"): (5, 1, "REG"),
+    ("Itálie", "Slovensko", "GB"): (1, 4, "REG"),
+    ("Rakousko", "Maďarsko", "GA"): (4, 2, "REG"),
+    ("Švédsko", "Dánsko", "GB"): (6, 2, "REG"),
+    ("Německo", "Lotyšsko", "GA"): (0, 2, "REG"),
+    ("Norsko", "Slovinsko", "GB"): (4, 0, "REG"),
 }
 
-# Mapování datumů na "číslo dne" pro výpočet únavy (Back-to-back zápasy)
 date_mapping = {
     "Pátek 15. května": 1, "Sobota 16. května": 2, "Neděle 17. května": 3,
     "Pondělí 18. května": 4, "Úterý 19. května": 5, "Středa 20. května": 6,
@@ -103,12 +109,12 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
     rest2 = current_day - last_played_dict.get(t2, -99)
     
     if rest1 == 1 and rest2 > 1:
-        off1 *= 0.95; def1 *= 0.95 # T1 hrál včera, T2 ne -> T1 je unavený
+        off1 *= 0.95; def1 *= 0.95 
     elif rest2 == 1 and rest1 > 1:
-        off2 *= 0.95; def2 *= 0.95 # T2 hrál včera, T1 ne -> T2 je unavený
+        off2 *= 0.95; def2 *= 0.95 
 
-    # Výpočet základních gólů
-    base_avg = 2.8 if stage.startswith("G") else 2.3
+    # SNÍŽENÝ PRŮMĚR GÓLŮ PRO VĚTŠÍ REALISTIČNOST
+    base_avg = 2.4 if stage.startswith("G") else 2.0
     l1 = base_avg * (off1 / def2)**1.4
     l2 = base_avg * (off2 / def1)**1.4
     
@@ -298,7 +304,7 @@ tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zá
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Sobota 16. května")
+    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Neděle 17. května")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     
     today = [m for m in all_m if m["d"] == sel_date]
