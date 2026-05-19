@@ -5,28 +5,28 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "8.2-DAY3-LOWER-SCORING"
+APP_VERSION = "9.0-MOMENTUM-UPDATE"
 
-# --- 2. DATA (Aktualizováno po 3. hracím dni!) ---
+# --- 2. DATA (Aktualizováno po 4. hracím dni!) ---
 team_powers_db = {
     # Skupina A
-    "USA": {"OFF": 93, "DEF": 89, "SKILL": 96},            
-    "Finsko": {"OFF": 91, "DEF": 95, "SKILL": 89},         
-    "Švýcarsko": {"OFF": 96, "DEF": 94, "SKILL": 92},      
-    "Německo": {"OFF": 78, "DEF": 89, "SKILL": 84},        # Brutální ofenzivní trápení (0 gólů proti LAT)
-    "Lotyšsko": {"OFF": 69, "DEF": 80, "SKILL": 72},       # Skvělá defenziva a čisté konto
-    "Rakousko": {"OFF": 62, "DEF": 61, "SKILL": 60},       # Důležitá výhra, ofenziva šlape
+    "USA": {"OFF": 90, "DEF": 85, "SKILL": 96},            # Krize v obraně
+    "Finsko": {"OFF": 93, "DEF": 95, "SKILL": 89},         # Exploze proti USA
+    "Švýcarsko": {"OFF": 98, "DEF": 94, "SKILL": 92},      # Absolutní ofenzivní válec
+    "Německo": {"OFF": 78, "DEF": 84, "SKILL": 84},        # Těžká deka
+    "Lotyšsko": {"OFF": 69, "DEF": 80, "SKILL": 72},       
+    "Rakousko": {"OFF": 62, "DEF": 61, "SKILL": 60},       
     "Velká Británie": {"OFF": 44, "DEF": 44, "SKILL": 40}, 
     "Maďarsko": {"OFF": 39, "DEF": 35, "SKILL": 35},       
     
     # Skupina B
     "Kanada": {"OFF": 99, "DEF": 89, "SKILL": 99},         
-    "Švédsko": {"OFF": 92, "DEF": 91, "SKILL": 90},        # Ofenzivní exploze proti Dánsku
-    "Česko": {"OFF": 87, "DEF": 82, "SKILL": 94},          
-    "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      # Jistá výhra nad Itálií, návrat sebevědomí
-    "Dánsko": {"OFF": 65, "DEF": 67, "SKILL": 65},         # Obrana hořela proti Švédům
-    "Norsko": {"OFF": 67, "DEF": 66, "SKILL": 62},         # Dominantní výhra nad Slovinskem
-    "Slovinsko": {"OFF": 55, "DEF": 54, "SKILL": 55},      # Návrat do reality po výhře nad CZE
+    "Švédsko": {"OFF": 92, "DEF": 88, "SKILL": 90},        # Brankáři proti ČR propadli
+    "Česko": {"OFF": 89, "DEF": 85, "SKILL": 94},          # Brutální efektivita střelby
+    "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      
+    "Dánsko": {"OFF": 65, "DEF": 67, "SKILL": 65},         
+    "Norsko": {"OFF": 67, "DEF": 66, "SKILL": 62},         
+    "Slovinsko": {"OFF": 55, "DEF": 54, "SKILL": 55},      
     "Itálie": {"OFF": 47, "DEF": 55, "SKILL": 45}          
 }
 
@@ -35,27 +35,29 @@ groups_def = {
     "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-# REÁLNÉ VÝSLEDKY - Zapsán 1., 2. a 3. den
+# REÁLNÉ VÝSLEDKY - Zapsán 1. - 4. den
 results_db = {
-    # Den 1
     ("Finsko", "Německo", "GA"): (3, 1, "REG"),
     ("Švédsko", "Kanada", "GB"): (3, 5, "REG"),
     ("Švýcarsko", "USA", "GA"): (3, 1, "REG"),
     ("Dánsko", "Česko", "GB"): (1, 4, "REG"),
-    # Den 2
     ("Rakousko", "Velká Británie", "GA"): (5, 2, "REG"),
     ("Slovensko", "Norsko", "GB"): (2, 1, "REG"),
     ("Finsko", "Maďarsko", "GA"): (4, 1, "REG"),
     ("Kanada", "Itálie", "GB"): (6, 0, "REG"),
     ("Švýcarsko", "Lotyšsko", "GA"): (4, 2, "REG"),
     ("Slovinsko", "Česko", "GB"): (3, 2, "PP"),
-    # Den 3
     ("USA", "Velká Británie", "GA"): (5, 1, "REG"),
     ("Itálie", "Slovensko", "GB"): (1, 4, "REG"),
     ("Rakousko", "Maďarsko", "GA"): (4, 2, "REG"),
     ("Švédsko", "Dánsko", "GB"): (6, 2, "REG"),
     ("Německo", "Lotyšsko", "GA"): (0, 2, "REG"),
     ("Norsko", "Slovinsko", "GB"): (4, 0, "REG"),
+    # NOVÉ ZÁPASY (4. den)
+    ("Finsko", "USA", "GA"): (6, 2, "REG"),
+    ("Kanada", "Dánsko", "GB"): (5, 1, "REG"),
+    ("Švýcarsko", "Německo", "GA"): (6, 1, "REG"),
+    ("Česko", "Švédsko", "GB"): (4, 3, "REG"),
 }
 
 date_mapping = {
@@ -65,7 +67,6 @@ date_mapping = {
     "Neděle 24. května": 10, "Pondělí 25. května": 11, "Úterý 26. května": 12,
     "Čtvrtek 28. května (ČF)": 14, "Sobota 30. května (SF)": 16, "Neděle 31. května (Medaile)": 17
 }
-
 dates_list = list(date_mapping.keys())
 
 # --- 3. CSS DESIGN ---
@@ -91,8 +92,24 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- POMOCNÁ FUNKCE PRO FORMU ---
+def get_team_form(team, matches, current_date_idx):
+    past_matches = [m for m in matches if m["t1"] == team or m["t2"] == team]
+    past_matches = [m for m in past_matches if dates_list.index(m["d"]) < current_date_idx]
+    
+    form_str = ""
+    streak = 0
+    for m in past_matches[-3:]: # Poslední 3 zápasy
+        is_t1 = m["t1"] == team
+        won = (is_t1 and m["s1"] > m["s2"]) or (not is_t1 and m["s2"] > m["s1"])
+        form_str += "✅" if won else "❌"
+        if won: streak = streak + 1 if streak > 0 else 1
+        else: streak = streak - 1 if streak < 0 else -1
+            
+    return form_str, streak
+
 # --- 4. LOGIKA PRO ANALYTICS ---
-def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_dict):
+def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_dict, form_streak1=0, form_streak2=0):
     if (t1, t2, stage) in db: return db[(t1, t2, stage)]
     if (t2, t1, stage) in db: r = db[(t2, t1, stage)]; return (r[1], r[0], r[2])
     
@@ -100,20 +117,23 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
     off1, def1, skill1 = powers[t1]["OFF"], powers[t1]["DEF"], powers[t1]["SKILL"]
     off2, def2, skill2 = powers[t2]["OFF"], powers[t2]["DEF"], powers[t2]["SKILL"]
     
-    # 1. DOMÁCÍ PROSTŘEDÍ (Švýcarsko)
+    # 1. DOMÁCÍ PROSTŘEDÍ
     if t1 == "Švýcarsko": off1 *= 1.05; def1 *= 1.05
     if t2 == "Švýcarsko": off2 *= 1.05; def2 *= 1.05
         
-    # 2. ÚNAVA (Back-to-back zápasy)
+    # 2. ÚNAVA (Back-to-back)
     rest1 = current_day - last_played_dict.get(t1, -99)
     rest2 = current_day - last_played_dict.get(t2, -99)
     
-    if rest1 == 1 and rest2 > 1:
-        off1 *= 0.95; def1 *= 0.95 
-    elif rest2 == 1 and rest1 > 1:
-        off2 *= 0.95; def2 *= 0.95 
+    if rest1 == 1 and rest2 > 1: off1 *= 0.95; def1 *= 0.95 
+    elif rest2 == 1 and rest1 > 1: off2 *= 0.95; def2 *= 0.95 
 
-    # SNÍŽENÝ PRŮMĚR GÓLŮ PRO VĚTŠÍ REALISTIČNOST
+    # 3. MOMENTUM (Forma)
+    if form_streak1 >= 2: off1 *= 1.04; def1 *= 1.04
+    elif form_streak1 <= -2: off1 *= 0.96; def1 *= 0.96
+    if form_streak2 >= 2: off2 *= 1.04; def2 *= 1.04
+    elif form_streak2 <= -2: off2 *= 0.96; def2 *= 0.96
+
     base_avg = 2.4 if stage.startswith("G") else 2.0
     l1 = base_avg * (off1 / def2)**1.4
     l2 = base_avg * (off2 / def1)**1.4
@@ -121,7 +141,6 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
     s1 = curr_rng.poisson(l1)
     s2 = curr_rng.poisson(l2)
     
-    # 3. DRAMA V ZÁVĚRU (Empty Net / Pozdní vyrovnání)
     if s1 == s2 + 1:
         roll = curr_rng.rand()
         if roll < 0.25: s1 += 1      
@@ -131,14 +150,11 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
         if roll < 0.25: s2 += 1      
         elif roll < 0.35: s1 += 1    
 
-    # 4. PRODLOUŽENÍ & NÁJEZDY (Skill-Based)
     rtype = "REG"
     if s1 == s2:
         rtype = "PP" if curr_rng.rand() < 0.65 else "SN"
-        if curr_rng.rand() < (skill1 / (skill1 + skill2)): 
-            s1 += 1
-        else: 
-            s2 += 1
+        if curr_rng.rand() < (skill1 / (skill1 + skill2)): s1 += 1
+        else: s2 += 1
             
     return s1, s2, rtype
 
@@ -217,7 +233,12 @@ def run_tourney_cached(seed, powers, db, version):
 
     for i, (d, t1, t2, gn) in enumerate(sched):
         day_num = date_mapping[d]
-        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}", day_num, last_played)
+        d_idx = dates_list.index(d)
+        
+        _, streak1 = get_team_form(t1, matches, d_idx)
+        _, streak2 = get_team_form(t2, matches, d_idx)
+        
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}", day_num, last_played, streak1, streak2)
         matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
         last_played[t1] = day_num
         last_played[t2] = day_num
@@ -304,7 +325,7 @@ tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zá
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Neděle 17. května")
+    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Pondělí 18. května")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     
     today = [m for m in all_m if m["d"] == sel_date]
@@ -323,7 +344,14 @@ with tab1:
             past_dates = dates_list[:current_date_idx + 1]
             g_m = [m for m in all_m if m["stg"] == f"G{gn}" and m["d"] in past_dates]
             sorted_tms, stats = get_iihf_rankings(groups_def[gn], g_m)
-            df_g = pd.DataFrame([{"Tým": t, "Body": stats[t]["B"], "Skóre": f"{stats[t]['GF']}:{stats[t]['GA']}"} for t in sorted_tms])
+            
+            # PŘIDÁNÍ SLOUPCE FORMA
+            table_data = []
+            for t in sorted_tms:
+                form_str, _ = get_team_form(t, all_m, current_date_idx + 1)
+                table_data.append({"Tým": t, "Forma": form_str, "Body": stats[t]["B"], "Skóre": f"{stats[t]['GF']}:{stats[t]['GA']}"})
+                
+            df_g = pd.DataFrame(table_data)
             df_g.index += 1
             with cols_g[i]: st.write(f"**Skupina {gn}**"); st.table(df_g)
     else:
@@ -347,15 +375,4 @@ with tab2:
     from matplotlib.colors import LinearSegmentedColormap
     custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
     st.dataframe(mc_df[["🛡️ Postup do ČF", "🥇 Zlato", "🥈 Stříbro", "🥉 Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=600)
-
-with tab3:
-    st.header("🔍 Hledač zázraků")
-    _, mc_raw = get_mc_stats(10000, team_powers_db, results_db, APP_VERSION)
-    look_t = st.selectbox("Vyber tým", options=list(team_powers_db.keys()))
-    look_ty = st.radio("Cíl", ["🥇 Pouze Zlato", "🥉 Jakákoliv medaile"])
-    f_seeds = mc_raw[look_t]["G_Seeds"] if "Zlato" in look_ty else mc_raw[look_t]["M_Seeds"]
-    if f_seeds:
-        st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
-        if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
-    else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
-    
+        
