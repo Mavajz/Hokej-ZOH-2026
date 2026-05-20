@@ -5,29 +5,29 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "9.0-MOMENTUM-UPDATE"
+APP_VERSION = "10.1-HUN-MIRACLE"
 
-# --- 2. DATA (Aktualizováno po 4. hracím dni!) ---
+# --- 2. DATA (Opraveno po maďarském zázraku!) ---
 team_powers_db = {
     # Skupina A
-    "USA": {"OFF": 90, "DEF": 85, "SKILL": 96},            # Krize v obraně
-    "Finsko": {"OFF": 93, "DEF": 95, "SKILL": 89},         # Exploze proti USA
-    "Švýcarsko": {"OFF": 98, "DEF": 94, "SKILL": 92},      # Absolutní ofenzivní válec
-    "Německo": {"OFF": 78, "DEF": 84, "SKILL": 84},        # Těžká deka
-    "Lotyšsko": {"OFF": 69, "DEF": 80, "SKILL": 72},       
-    "Rakousko": {"OFF": 62, "DEF": 61, "SKILL": 60},       
-    "Velká Británie": {"OFF": 44, "DEF": 44, "SKILL": 40}, 
-    "Maďarsko": {"OFF": 39, "DEF": 35, "SKILL": 35},       
+    "USA": {"OFF": 90, "DEF": 85, "SKILL": 96},            
+    "Finsko": {"OFF": 93, "DEF": 95, "SKILL": 89},         
+    "Švýcarsko": {"OFF": 98, "DEF": 94, "SKILL": 92},      
+    "Německo": {"OFF": 78, "DEF": 84, "SKILL": 84},        
+    "Lotyšsko": {"OFF": 67, "DEF": 77, "SKILL": 72},       
+    "Rakousko": {"OFF": 65, "DEF": 64, "SKILL": 60},       
+    "Velká Británie": {"OFF": 38, "DEF": 35, "SKILL": 35}, # Těžký kolaps, pád na dno
+    "Maďarsko": {"OFF": 49, "DEF": 47, "SKILL": 40},       # Obrovský boost za výhru 5:0!
     
     # Skupina B
     "Kanada": {"OFF": 99, "DEF": 89, "SKILL": 99},         
-    "Švédsko": {"OFF": 92, "DEF": 88, "SKILL": 90},        # Brankáři proti ČR propadli
-    "Česko": {"OFF": 89, "DEF": 85, "SKILL": 94},          # Brutální efektivita střelby
-    "Slovensko": {"OFF": 86, "DEF": 85, "SKILL": 88},      
+    "Švédsko": {"OFF": 92, "DEF": 88, "SKILL": 90},        
+    "Česko": {"OFF": 89, "DEF": 85, "SKILL": 94},          
+    "Slovensko": {"OFF": 87, "DEF": 81, "SKILL": 88},      
     "Dánsko": {"OFF": 65, "DEF": 67, "SKILL": 65},         
-    "Norsko": {"OFF": 67, "DEF": 66, "SKILL": 62},         
-    "Slovinsko": {"OFF": 55, "DEF": 54, "SKILL": 55},      
-    "Itálie": {"OFF": 47, "DEF": 55, "SKILL": 45}          
+    "Norsko": {"OFF": 69, "DEF": 68, "SKILL": 62},         
+    "Slovinsko": {"OFF": 59, "DEF": 53, "SKILL": 55},      
+    "Itálie": {"OFF": 45, "DEF": 52, "SKILL": 45}          
 }
 
 groups_def = {
@@ -35,7 +35,7 @@ groups_def = {
     "B": ["Švédsko", "Kanada", "Dánsko", "Česko", "Slovensko", "Norsko", "Itálie", "Slovinsko"]
 }
 
-# REÁLNÉ VÝSLEDKY - Zapsán 1. - 4. den
+# REÁLNÉ VÝSLEDKY - Zapsán 1. - 5. den (OPRAVENO)
 results_db = {
     ("Finsko", "Německo", "GA"): (3, 1, "REG"),
     ("Švédsko", "Kanada", "GB"): (3, 5, "REG"),
@@ -53,11 +53,15 @@ results_db = {
     ("Švédsko", "Dánsko", "GB"): (6, 2, "REG"),
     ("Německo", "Lotyšsko", "GA"): (0, 2, "REG"),
     ("Norsko", "Slovinsko", "GB"): (4, 0, "REG"),
-    # NOVÉ ZÁPASY (4. den)
     ("Finsko", "USA", "GA"): (6, 2, "REG"),
     ("Kanada", "Dánsko", "GB"): (5, 1, "REG"),
     ("Švýcarsko", "Německo", "GA"): (6, 1, "REG"),
     ("Česko", "Švédsko", "GB"): (4, 3, "REG"),
+    # ZÁPASY (5. den)
+    ("Lotyšsko", "Rakousko", "GA"): (1, 3, "REG"),
+    ("Itálie", "Norsko", "GB"): (0, 4, "REG"),
+    ("Maďarsko", "Velká Británie", "GA"): (5, 0, "REG"), # OPRAVENO!
+    ("Slovinsko", "Slovensko", "GB"): (4, 5, "SN"),
 }
 
 date_mapping = {
@@ -69,29 +73,6 @@ date_mapping = {
 }
 dates_list = list(date_mapping.keys())
 
-# --- 3. CSS DESIGN ---
-st.markdown("""
-<style>
-    .match-box {
-        background-color: var(--secondary-background-color);
-        border: 1px solid rgba(128, 128, 128, 0.3);
-        border-radius: 10px; padding: 12px; margin-bottom: 12px; 
-        display: flex; justify-content: space-between; align-items: center;
-    }
-    .team-n { font-weight: bold; font-size: 1.1em; width: 42%; }
-    .score-n { 
-        background: #ff4b4b; color: white !important; font-weight: 900; 
-        font-size: 1.4em; padding: 4px 15px; border-radius: 6px;
-        min-width: 90px; text-align: center;
-    }
-    .ot-label { font-size: 0.55em; display: block; line-height: 1; opacity: 0.9; font-weight: bold; color: white; }
-    .bracket-card {
-        background: rgba(255, 75, 75, 0.1); border-left: 5px solid #ff4b4b;
-        padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 0.95em;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # --- POMOCNÁ FUNKCE PRO FORMU ---
 def get_team_form(team, matches, current_date_idx):
     past_matches = [m for m in matches if m["t1"] == team or m["t2"] == team]
@@ -99,7 +80,7 @@ def get_team_form(team, matches, current_date_idx):
     
     form_str = ""
     streak = 0
-    for m in past_matches[-3:]: # Poslední 3 zápasy
+    for m in past_matches[-3:]:
         is_t1 = m["t1"] == team
         won = (is_t1 and m["s1"] > m["s2"]) or (not is_t1 and m["s2"] > m["s1"])
         form_str += "✅" if won else "❌"
@@ -117,22 +98,23 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
     off1, def1, skill1 = powers[t1]["OFF"], powers[t1]["DEF"], powers[t1]["SKILL"]
     off2, def2, skill2 = powers[t2]["OFF"], powers[t2]["DEF"], powers[t2]["SKILL"]
     
-    # 1. DOMÁCÍ PROSTŘEDÍ
     if t1 == "Švýcarsko": off1 *= 1.05; def1 *= 1.05
     if t2 == "Švýcarsko": off2 *= 1.05; def2 *= 1.05
         
-    # 2. ÚNAVA (Back-to-back)
     rest1 = current_day - last_played_dict.get(t1, -99)
     rest2 = current_day - last_played_dict.get(t2, -99)
     
     if rest1 == 1 and rest2 > 1: off1 *= 0.95; def1 *= 0.95 
     elif rest2 == 1 and rest1 > 1: off2 *= 0.95; def2 *= 0.95 
 
-    # 3. MOMENTUM (Forma)
     if form_streak1 >= 2: off1 *= 1.04; def1 *= 1.04
     elif form_streak1 <= -2: off1 *= 0.96; def1 *= 0.96
     if form_streak2 >= 2: off2 *= 1.04; def2 *= 1.04
     elif form_streak2 <= -2: off2 *= 0.96; def2 *= 0.96
+
+    if current_day >= 7 and stage.startswith("G"):
+        off1 *= curr_rng.uniform(0.9, 1.1)
+        off2 *= curr_rng.uniform(0.9, 1.1)
 
     base_avg = 2.4 if stage.startswith("G") else 2.0
     l1 = base_avg * (off1 / def2)**1.4
@@ -319,13 +301,22 @@ def get_mc_stats(n_sims, powers, db, version):
     df["🥉 Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("🥇 Zlato", ascending=False), res_stats
 
+# --- FUNKCE PRO VIZUÁLNÍ ZVÝRAZNĚNÍ TABULEK ---
+def color_standings(row):
+    if row.name <= 4:
+        return ['background-color: rgba(0, 255, 0, 0.1)'] * len(row)
+    elif row.name == 8:
+        return ['background-color: rgba(255, 0, 0, 0.1)'] * len(row)
+    else:
+        return [''] * len(row)
+
 # --- 6. UI ---
 tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zázraků"])
 
 with tab1:
     c1, c2 = st.columns([1, 4])
     with c1: seed = st.number_input("ID Simulace", 1, 10000, 1)
-    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Pondělí 18. května")
+    with c2: sel_date = st.select_slider("Fáze turnaje", options=dates_list, value="Úterý 19. května")
     all_m = run_tourney_cached(seed, team_powers_db, results_db, APP_VERSION)
     
     today = [m for m in all_m if m["d"] == sel_date]
@@ -345,7 +336,6 @@ with tab1:
             g_m = [m for m in all_m if m["stg"] == f"G{gn}" and m["d"] in past_dates]
             sorted_tms, stats = get_iihf_rankings(groups_def[gn], g_m)
             
-            # PŘIDÁNÍ SLOUPCE FORMA
             table_data = []
             for t in sorted_tms:
                 form_str, _ = get_team_form(t, all_m, current_date_idx + 1)
@@ -353,7 +343,9 @@ with tab1:
                 
             df_g = pd.DataFrame(table_data)
             df_g.index += 1
-            with cols_g[i]: st.write(f"**Skupina {gn}**"); st.table(df_g)
+            with cols_g[i]: 
+                st.write(f"**Skupina {gn}**")
+                st.dataframe(df_g.style.apply(color_standings, axis=1), use_container_width=True)
     else:
         c_qf, c_sf, c_fin = st.columns(3); po = [m for m in all_m if m["stg"]=="PO"]
         with c_qf:
@@ -375,4 +367,4 @@ with tab2:
     from matplotlib.colors import LinearSegmentedColormap
     custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
     st.dataframe(mc_df[["🛡️ Postup do ČF", "🥇 Zlato", "🥈 Stříbro", "🥉 Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=600)
-        
+    
