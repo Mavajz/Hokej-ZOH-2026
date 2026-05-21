@@ -5,7 +5,7 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "11.1-BUGFIX"
+APP_VERSION = "11.2-SYNTAX-FIX"
 
 # --- 2. DATA (Aktualizováno po 6. hracím dni) ---
 team_powers_db = {
@@ -392,4 +392,57 @@ with tab1:
                 st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>{scorers_html}", unsafe_allow_html=True)
     st.markdown("---")
     
-    if "května" in sel_date and
+    if ("května" in sel_date and 
+        "ČF" not in sel_date and 
+        "SF" not in sel_date and 
+        "Medaile" not in sel_date):
+        
+        cols_g = st.columns(2)
+        for i, gn in enumerate(["A", "B"]):
+            current_date_idx = dates_list.index(sel_date)
+            past_dates = dates_list[:current_date_idx + 1]
+            g_m = [m for m in all_m if m["stg"] == f"G{gn}" and m["d"] in past_dates]
+            sorted_tms, stats = get_iihf_rankings(groups_def[gn], g_m)
+            
+            table_data = []
+            for t in sorted_tms:
+                form_str, _ = get_team_form(t, all_m, current_date_idx + 1)
+                table_data.append({"Tým": t, "Forma": form_str, "Body": stats[t]["B"], "Skóre": f"{stats[t]['GF']}:{stats[t]['GA']}"})
+                
+            df_g = pd.DataFrame(table_data)
+            df_g.index += 1
+            with cols_g[i]: 
+                st.write(f"**Skupina {gn}**")
+                st.dataframe(df_g.style.apply(color_standings, axis=1), use_container_width=True)
+    else:
+        c_qf, c_sf, c_fin = st.columns(3); po = [m for m in all_m if m["stg"]=="PO"]
+        with c_qf:
+            st.write("**Čtvrtfinále**")
+            for m in [x for x in po if "ČF" in x["lbl"]]:
+                lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
+        with c_sf:
+            st.write("**Semifinále**")
+            for m in [x for x in po if "SF" in x["lbl"]]:
+                lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
+        with c_fin:
+            st.write("**Medaile**")
+            for m in [x for x in po if "místo" in x["lbl"] or "Finále" in x["lbl"]]:
+                lbl = f" ({m['rt']})" if m['rt'] != "REG" else ""; st.markdown(f"<div class='bracket-card'><b>{m['lbl']}</b><br>{m['t1']} - {m['t2']} <br><b>{m['s1']}:{m['s2']}{lbl}</b></div>", unsafe_allow_html=True)
+
+with tab2:
+    st.header("📈 Prediktor (10 000 simulací)")
+    mc_df, _ = get_mc_stats(10000, team_powers_db, results_db, APP_VERSION)
+    from matplotlib.colors import LinearSegmentedColormap
+    custom_cmap = LinearSegmentedColormap.from_list("custom_green", ["#ffffff", "#00ff00"])
+    st.dataframe(mc_df[["🛡️ Postup do ČF", "🥇 Zlato", "🥈 Stříbro", "🥉 Bronz", "Celkem medaile"]].style.background_gradient(cmap=custom_cmap, axis=0).format("{:.2f} %"), use_container_width=True, height=600)
+
+with tab3:
+    st.header("🔍 Hledač zázraků")
+    _, mc_raw = get_mc_stats(10000, team_powers_db, results_db, APP_VERSION)
+    look_t = st.selectbox("Vyber tým", options=list(team_powers_db.keys()))
+    look_ty = st.radio("Cíl", ["🥇 Pouze Zlato", "🥉 Jakákoliv medaile"])
+    f_seeds = mc_raw[look_t]["G_Seeds"] if "Zlato" in look_ty else mc_raw[look_t]["M_Seeds"]
+    if f_seeds:
+        st.success(f"Tým **{look_t}** splnil tento cíl v **{len(f_seeds)}** simulacích.")
+        if st.button("Vygeneruj náhodné ID"): st.info(f"Zázrak: Seed **{random.choice(f_seeds)}**")
+    else: st.error("Tento tým v 10 000 simulacích na tento cíl nedosáhl.")
