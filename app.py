@@ -5,7 +5,7 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "11.2-SYNTAX-FIX"
+APP_VERSION = "11.3-AUTOMATED-PURE"
 
 # --- 2. DATA (Aktualizováno po 6. hracím dni) ---
 team_powers_db = {
@@ -28,26 +28,6 @@ team_powers_db = {
     "Norsko": {"OFF": 69, "DEF": 68, "SKILL": 62},         
     "Slovinsko": {"OFF": 55, "DEF": 50, "SKILL": 55},      
     "Itálie": {"OFF": 45, "DEF": 55, "SKILL": 45}          
-}
-
-# Hvězdní hráči pro generátor střelců
-top_scorers_db = {
-    "USA": ["M. Tkachuk", "J. Hagens", "R. Leonard", "C. Caufield"],
-    "Finsko": ["A. Barkov", "T. Teräväinen", "A. Lundell", "M. Rantanen"],
-    "Švýcarsko": ["N. Hischier", "T. Meier", "K. Fiala", "R. Josi"],
-    "Německo": ["D. Kahun", "M. Seider", "J. Peterka", "L. Reichel"],
-    "Lotyšsko": ["R. Balcers", "K. Daugaviņš", "R. Ābols"],
-    "Rakousko": ["M. Rossi", "D. Zwerger", "P. Huber"],
-    "Velká Británie": ["L. Kirk", "B. Perlini", "C. Neilson"],
-    "Maďarsko": ["V. Galló", "J. Hári", "B. Sebők"],
-    "Kanada": ["C. McDavid", "S. Crosby", "C. Bedard", "J. Tavares"],
-    "Švédsko": ["L. Raymond", "W. Nylander", "E. Pettersson", "A. Kempe"],
-    "Česko": ["D. Pastrňák", "M. Nečas", "R. Červenka", "D. Kubalík"],
-    "Slovensko": ["J. Slafkovský", "T. Tatar", "D. Dvorský", "P. Regenda"],
-    "Dánsko": ["N. Ehlers", "O. Bjorkstrand", "F. Andersen"],
-    "Norsko": ["M. Zuccarello", "P. Thoresen", "M. Olimb"],
-    "Slovinsko": ["A. Kopitar", "J. Drozg", "R. Tičar"],
-    "Itálie": ["T. Purdeller", "L. Frigo", "D. Kostner"]
 }
 
 groups_def = {
@@ -134,14 +114,6 @@ def get_team_form(team, matches, current_date_idx):
         else: streak = streak - 1 if streak < 0 else -1
     return form_str, streak
 
-def generate_scorers(team, goals, rng):
-    if goals == 0: return []
-    roster = top_scorers_db.get(team, ["Neznámý hráč"])
-    weights = [40, 30] + [10] * max(0, len(roster) - 2)
-    weights = weights[:len(roster)] 
-    scorers = rng.choices(roster, weights=weights, k=goals)
-    return scorers
-
 def color_standings(row):
     if row.name <= 4:
         return ['background-color: rgba(0, 255, 0, 0.1)'] * len(row)
@@ -154,10 +126,10 @@ def color_standings(row):
 def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_dict, form_streak1=0, form_streak2=0):
     if (t1, t2, stage) in db: 
         res = db[(t1, t2, stage)]
-        return res[0], res[1], res[2], [], []
+        return res[0], res[1], res[2]
     if (t2, t1, stage) in db: 
         res = db[(t2, t1, stage)]
-        return res[1], res[0], res[2], [], []
+        return res[1], res[0], res[2]
     
     curr_rng = np.random.RandomState(match_seed)
     off1, def1, skill1 = powers[t1]["OFF"], powers[t1]["DEF"], powers[t1]["SKILL"]
@@ -201,10 +173,7 @@ def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_di
         if curr_rng.rand() < (skill1 / (skill1 + skill2)): s1 += 1
         else: s2 += 1
             
-    sc1 = generate_scorers(t1, s1, curr_rng)
-    sc2 = generate_scorers(t2, s2, curr_rng)
-    
-    return s1, s2, rtype, sc1, sc2
+    return s1, s2, rtype
 
 def get_iihf_rankings(group_teams, group_matches):
     full_stats = {t: {"B": 0, "GF": 0, "GA": 0} for t in group_teams}
@@ -286,8 +255,8 @@ def run_tourney_cached(seed, powers, db, version):
         _, streak1 = get_team_form(t1, matches, d_idx)
         _, streak2 = get_team_form(t2, matches, d_idx)
         
-        s1, s2, rt, sc1, sc2 = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}", day_num, last_played, streak1, streak2)
-        matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}", "sc1": sc1, "sc2": sc2})
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + i, powers, db, f"G{gn}", day_num, last_played, streak1, streak2)
+        matches.append({"d": d, "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": f"G{gn}"})
         last_played[t1] = day_num
         last_played[t2] = day_num
 
@@ -309,9 +278,9 @@ def run_tourney_cached(seed, powers, db, version):
     
     cf_day = date_mapping["Čtvrtek 28. května (ČF)"]
     for i, (t1, t2) in enumerate(qf_pairs):
-        s1, s2, rt, sc1, sc2 = sim_match(t1, t2, seed * 1000 + 100 + i, powers, db, "PO", cf_day, last_played)
+        s1, s2, rt = sim_match(t1, t2, seed * 1000 + 100 + i, powers, db, "PO", cf_day, last_played)
         w = t1 if s1 > s2 else t2; qf_winners.append(w)
-        matches.append({"d": "Čtvrtek 28. května (ČF)", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": qf_labels[i], "w": w, "sc1": sc1, "sc2": sc2})
+        matches.append({"d": "Čtvrtek 28. května (ČF)", "t1": t1, "t2": t2, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": qf_labels[i], "w": w})
         last_played[t1] = cf_day; last_played[t2] = cf_day
 
     def reseeding_key(t):
@@ -326,20 +295,20 @@ def run_tourney_cached(seed, powers, db, version):
     sf_w, sf_l = [], []
     sf_day = date_mapping["Sobota 30. května (SF)"]
     for i, (a, b) in enumerate(sf_pairs):
-        s1, s2, rt, sc1, sc2 = sim_match(a, b, seed * 1000 + 200 + i, powers, db, "PO", sf_day, last_played)
+        s1, s2, rt = sim_match(a, b, seed * 1000 + 200 + i, powers, db, "PO", sf_day, last_played)
         w, l = (a, b) if s1 > s2 else (b, a)
         sf_w.append(w); sf_l.append(l)
-        matches.append({"d": "Sobota 30. května (SF)", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": sf_labels[i], "w": w, "sc1": sc1, "sc2": sc2})
+        matches.append({"d": "Sobota 30. května (SF)", "t1": a, "t2": b, "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": sf_labels[i], "w": w})
         last_played[a] = sf_day; last_played[b] = sf_day
 
     med_day = date_mapping["Neděle 31. května (Medaile)"]
     if len(sf_l) >= 2:
-        s1, s2, rt, sc1, sc2 = sim_match(sf_l[0], sf_l[1], seed * 1000 + 300, powers, db, "PO", med_day, last_played)
-        matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "O 3. místo (15:30, Curych)", "w": sf_l[0] if s1>s2 else sf_l[1], "sc1": sc1, "sc2": sc2})
+        s1, s2, rt = sim_match(sf_l[0], sf_l[1], seed * 1000 + 300, powers, db, "PO", med_day, last_played)
+        matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_l[0], "t2": sf_l[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "O 3. místo (15:30, Curych)", "w": sf_l[0] if s1>s2 else sf_l[1]})
     
     if len(sf_w) >= 2:
-        s1, s2, rt, sc1, sc2 = sim_match(sf_w[0], sf_w[1], seed * 1000 + 400, powers, db, "PO", med_day, last_played)
-        matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "Finále (20:15, Curych)", "w": sf_w[0] if s1>s2 else sf_w[1], "sc1": sc1, "sc2": sc2})
+        s1, s2, rt = sim_match(sf_w[0], sf_w[1], seed * 1000 + 400, powers, db, "PO", med_day, last_played)
+        matches.append({"d": "Neděle 31. května (Medaile)", "t1": sf_w[0], "t2": sf_w[1], "s1": s1, "s2": s2, "rt": rt, "stg": "PO", "lbl": "Finále (20:15, Curych)", "w": sf_w[0] if s1>s2 else sf_w[1]})
     
     return matches
 
@@ -382,14 +351,7 @@ with tab1:
         for i, m in enumerate(today):
             with cols[i % 2]:
                 label = f"<span class='ot-label'>{m['rt']}</span>" if m['rt'] != "REG" else ""
-                
-                scorers_html = ""
-                if m.get("sc1") or m.get("sc2"):
-                    sc1_str = ", ".join(m["sc1"]) if m["sc1"] else ""
-                    sc2_str = ", ".join(m["sc2"]) if m["sc2"] else ""
-                    scorers_html = f"<div style='font-size:0.8em; color:gray; margin-top:5px;'><div style='float:left; width:45%;'>{sc1_str}</div><div style='float:right; width:45%; text-align:right;'>{sc2_str}</div><div style='clear:both;'></div></div>"
-
-                st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>{scorers_html}", unsafe_allow_html=True)
+                st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>", unsafe_allow_html=True)
     st.markdown("---")
     
     if ("května" in sel_date and 
