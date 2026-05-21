@@ -5,29 +5,29 @@ import random
 
 # --- 1. KONFIGURACE ---
 st.set_page_config(page_title="MS 2026 Simulator | PRO Analytics", layout="wide", page_icon="🏒")
-APP_VERSION = "11.0-GOALSCORERS"
+APP_VERSION = "11.1-BUGFIX"
 
-# --- 2. DATA (Aktualizováno po 6. hracím dni!) ---
+# --- 2. DATA (Aktualizováno po 6. hracím dni) ---
 team_powers_db = {
     # Skupina A
     "USA": {"OFF": 89, "DEF": 84, "SKILL": 96},            
     "Finsko": {"OFF": 93, "DEF": 95, "SKILL": 89},         
-    "Švýcarsko": {"OFF": 99, "DEF": 95, "SKILL": 92},      # Absolutní strop po výhře 9:0
-    "Německo": {"OFF": 81, "DEF": 86, "SKILL": 84},        # Heroický výkon proti USA
+    "Švýcarsko": {"OFF": 99, "DEF": 95, "SKILL": 92},      
+    "Německo": {"OFF": 81, "DEF": 86, "SKILL": 84},        
     "Lotyšsko": {"OFF": 67, "DEF": 77, "SKILL": 72},       
-    "Rakousko": {"OFF": 65, "DEF": 58, "SKILL": 60},       # Pád po debaklu
+    "Rakousko": {"OFF": 65, "DEF": 58, "SKILL": 60},       
     "Velká Británie": {"OFF": 38, "DEF": 35, "SKILL": 35}, 
     "Maďarsko": {"OFF": 49, "DEF": 47, "SKILL": 40},       
     
     # Skupina B
     "Kanada": {"OFF": 99, "DEF": 89, "SKILL": 99},         
-    "Švédsko": {"OFF": 92, "DEF": 90, "SKILL": 90},        # Čisté konto, jistota
-    "Česko": {"OFF": 89, "DEF": 84, "SKILL": 94},          # Úprava defenzivy za skvělý výkon proti ITA
+    "Švédsko": {"OFF": 92, "DEF": 90, "SKILL": 90},        
+    "Česko": {"OFF": 89, "DEF": 84, "SKILL": 94},          
     "Slovensko": {"OFF": 87, "DEF": 81, "SKILL": 88},      
     "Dánsko": {"OFF": 65, "DEF": 67, "SKILL": 65},         
     "Norsko": {"OFF": 69, "DEF": 68, "SKILL": 62},         
-    "Slovinsko": {"OFF": 55, "DEF": 50, "SKILL": 55},      # Návrat do reality
-    "Itálie": {"OFF": 45, "DEF": 55, "SKILL": 45}          # Beton drží, ale útok mlčí
+    "Slovinsko": {"OFF": 55, "DEF": 50, "SKILL": 55},      
+    "Itálie": {"OFF": 45, "DEF": 55, "SKILL": 45}          
 }
 
 # Hvězdní hráči pro generátor střelců
@@ -81,7 +81,6 @@ results_db = {
     ("Itálie", "Norsko", "GB"): (0, 4, "REG"),
     ("Maďarsko", "Velká Británie", "GA"): (5, 0, "REG"), 
     ("Slovinsko", "Slovensko", "GB"): (4, 5, "SN"),
-    # NOVÉ ZÁPASY (6. den - 20. května)
     ("Švýcarsko", "Rakousko", "GA"): (9, 0, "REG"),
     ("Česko", "Itálie", "GB"): (3, 1, "REG"),
     ("USA", "Německo", "GA"): (4, 3, "SN"),
@@ -97,7 +96,30 @@ date_mapping = {
 }
 dates_list = list(date_mapping.keys())
 
-# --- POMOCNÁ FUNKCE PRO FORMU A STŘELCE ---
+# --- 3. CSS DESIGN ---
+st.markdown("""
+<style>
+    .match-box {
+        background-color: var(--secondary-background-color);
+        border: 1px solid rgba(128, 128, 128, 0.3);
+        border-radius: 10px; padding: 12px; margin-bottom: 12px; 
+        display: flex; justify-content: space-between; align-items: center;
+    }
+    .team-n { font-weight: bold; font-size: 1.1em; width: 42%; }
+    .score-n { 
+        background: #ff4b4b; color: white !important; font-weight: 900; 
+        font-size: 1.4em; padding: 4px 15px; border-radius: 6px;
+        min-width: 90px; text-align: center;
+    }
+    .ot-label { font-size: 0.55em; display: block; line-height: 1; opacity: 0.9; font-weight: bold; color: white; }
+    .bracket-card {
+        background: rgba(255, 75, 75, 0.1); border-left: 5px solid #ff4b4b;
+        padding: 10px; margin-bottom: 10px; border-radius: 4px; font-size: 0.95em;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- POMOCNÉ FUNKCE ---
 def get_team_form(team, matches, current_date_idx):
     past_matches = [m for m in matches if m["t1"] == team or m["t2"] == team]
     past_matches = [m for m in past_matches if dates_list.index(m["d"]) < current_date_idx]
@@ -115,17 +137,23 @@ def get_team_form(team, matches, current_date_idx):
 def generate_scorers(team, goals, rng):
     if goals == 0: return []
     roster = top_scorers_db.get(team, ["Neznámý hráč"])
-    # 1. a 2. hráč na seznamu mají větší šanci skórovat
     weights = [40, 30] + [10] * max(0, len(roster) - 2)
     weights = weights[:len(roster)] 
     scorers = rng.choices(roster, weights=weights, k=goals)
     return scorers
 
+def color_standings(row):
+    if row.name <= 4:
+        return ['background-color: rgba(0, 255, 0, 0.1)'] * len(row)
+    elif row.name == 8:
+        return ['background-color: rgba(255, 0, 0, 0.1)'] * len(row)
+    else:
+        return [''] * len(row)
+
 # --- 4. LOGIKA PRO ANALYTICS ---
 def sim_match(t1, t2, match_seed, powers, db, stage, current_day, last_played_dict, form_streak1=0, form_streak2=0):
     if (t1, t2, stage) in db: 
         res = db[(t1, t2, stage)]
-        # Reálné zápasy nebudeme "vymýšlet" střelce pro UI, necháme prázdné
         return res[0], res[1], res[2], [], []
     if (t2, t1, stage) in db: 
         res = db[(t2, t1, stage)]
@@ -339,14 +367,6 @@ def get_mc_stats(n_sims, powers, db, version):
     df["🥉 Bronz"] = (df["Bronze"] / n_sims * 100); df["Celkem medaile"] = ((df["Gold"] + df["Silver"] + df["Bronze"]) / n_sims * 100)
     return df.sort_values("🥇 Zlato", ascending=False), res_stats
 
-def color_standings(row):
-    if row.name <= 4:
-        return ['background-color: rgba(0, 255, 0, 0.1)'] * len(row)
-    elif row.name == 8:
-        return ['background-color: rgba(255, 0, 0, 0.1)'] * len(row)
-    else:
-        return [''] * len(row)
-
 # --- 6. UI ---
 tab1, tab2, tab3 = st.tabs(["🎮 Simulace", "📊 Prediktor", "🔍 Hledač zázraků"])
 
@@ -363,7 +383,6 @@ with tab1:
             with cols[i % 2]:
                 label = f"<span class='ot-label'>{m['rt']}</span>" if m['rt'] != "REG" else ""
                 
-                # Zobrazení střelců pod skóre
                 scorers_html = ""
                 if m.get("sc1") or m.get("sc2"):
                     sc1_str = ", ".join(m["sc1"]) if m["sc1"] else ""
@@ -373,14 +392,4 @@ with tab1:
                 st.markdown(f"<div class='match-box'><div class='team-n'>{m['t1']}</div><div class='score-n'>{m['s1']}:{m['s2']}{label}</div><div class='team-n' style='text-align:right;'>{m['t2']}</div></div>{scorers_html}", unsafe_allow_html=True)
     st.markdown("---")
     
-    if "května" in sel_date and "ČF" not in sel_date and "SF" not in sel_date and "Medaile" not in sel_date:
-        cols_g = st.columns(2)
-        for i, gn in enumerate(["A", "B"]):
-            current_date_idx = dates_list.index(sel_date)
-            past_dates = dates_list[:current_date_idx + 1]
-            g_m = [m for m in all_m if m["stg"] == f"G{gn}" and m["d"] in past_dates]
-            sorted_tms, stats = get_iihf_rankings(groups_def[gn], g_m)
-            
-            table_data = []
-            for t in sorted_tms:
-       
+    if "května" in sel_date and
